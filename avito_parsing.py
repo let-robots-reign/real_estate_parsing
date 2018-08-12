@@ -3,13 +3,11 @@ from bs4 import BeautifulSoup
 import csv
 import time
 import random
-#from http_request_randomizer.requests.proxy.requestProxy import RequestProxy
 from urllib.parse import urljoin
 from fake_useragent import UserAgent
 
 
 def get_html(url):
-    #request = req_proxy.generate_proxied_request(url)
     return requests.get(url, headers={"User-Agent": UserAgent().chrome}).text
 
 
@@ -53,50 +51,45 @@ def get_selling_info(soup):
 
 
 def get_params(soup):
+    rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = ["Не указано"] * 7
     params = soup.find_all("li", class_="item-params-list-item")
-    try:
-        rooms_number = params[0].text.split(":")[1].strip()
-    except:
-        rooms_number = "Не указано"
-    try:
-        floor_number = params[1].text.split(":")[1].strip()
-    except:
-        floor_number = "Не указано"
-    try:
-        total_floors = params[2].text.split(":")[1].strip()
-    except:
-        total_floors = "Не указано"
-    try:
-        block_type = params[3].text.split(":")[1].strip()
-    except:
-        block_type = "Не указано"
-    try:
-        total_area = params[4].text.split(":")[1].strip()
-    except:
-        total_area = "Не указано"
-    try:
-        kitchen_area = params[5].text.split(":")[1].strip()
-    except:
-        kitchen_area = "Не указано"
-    try:
-        living_area = params[6].text.split(":")[1].strip()
-    except:
-        living_area = "Не указано"
+    for i in range(len(params)):
+        info = params[i].text.strip()
+        if "Количество комнат" in info:
+            rooms_number = info.split(":")[1].strip()
+        elif "Этаж" in info:
+            floor_number = info.split(":")[1].strip()
+        elif "Этажей в доме" in info:
+            total_floors = info.split(":")[1].strip()
+        elif "Тип дома" in info:
+            block_type = info.split(":")[1].strip()
+        elif "Общая площадь" in info:
+            total_area = info.split(":")[1].strip()
+        elif "Площадь кухни" in info:
+            kitchen_area = info.split(":")[1].strip()
+        elif "Жилая площадь" in info:
+            living_area = info.split(":")[1].strip()
     return rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area
 
 
-def get_seller_info(soup):
+def get_seller_type(soup):
     try:
-        seller_type = soup.find("div", class_="seller-info-value").find_all("div")[-1].text.strip()
-        seller_name = seller_type.find("div", class_="seller-info-name").find("a").text.strip()
-        if seller_type != "Частное лицо":
+        seller_type = soup.find("div", class_="seller-info-prop seller-info-prop_short_margin")
+        if seller_type is not None:
             seller_type = "Посредник"
         else:
             seller_type = "Собственник"
     except:
         seller_type = "Не указано"
+    return seller_type
+
+
+def get_seller_name(soup):
+    try:
+        seller_name = soup.find("div", class_="seller-info-name").find("a").text.strip()
+    except:
         seller_name = "Не указано"
-    return seller_type, seller_name
+    return seller_name
 
 
 def get_photos(soup):
@@ -124,6 +117,31 @@ def get_seller_phone(soup):
     pass
 
 
+def write_csv(data):
+    with open("avito_apartments.csv", "a") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(data)
+
+
+def get_apartment_data(html):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    if "сниму" not in title.lower() and "куплю" not in title.lower():
+        address = get_address(soup)
+        sell_type, price = get_selling_info(soup)
+        rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = get_params(soup)
+        seller_type = get_seller_type(soup)
+        seller_name = get_seller_name(soup)
+        images = get_photos(soup)
+        description = get_description(soup)
+
+        return (address, sell_type, block_type, rooms_number, floor_number, total_floors,
+              total_area, kitchen_area, living_area, price, seller_type, images,
+              description, seller_name)
+    return None
+
+
 def crawl_page(html):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
@@ -134,58 +152,16 @@ def crawl_page(html):
                 break
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
             data = get_apartment_data(get_html(url))
+            #print(data)
             if data is not None:
-                write_csv(data)
-            time.sleep(random.uniform(7, 10))
-
-            # querying phone
-            # url = "https://m.avito.ru/balakovo/kvartiry/2-k_kvartira_87_m_58_et._1653308606"
-            # headers = {
-            #     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36'}
-            #
-            # session = requests.session()
-            # resp = session.get(url, headers=headers)
-            #
-            # html = get_html(resp.content)
-            # href = html.xpath(".//*[@class='clearfix']/a[1]/@href")[0]
-            #
-            # url = urljoin(resp.url, href + '?async')
-            # headers["Referer"] = url
-            # resp = session.get(url, headers=headers)
-            #
-            # html = get_html(resp.content)
-            # phone = html.xpath(".//*[@class='clearfix']/a[1]/span/text()")[0]
-            # print(phone)
-            # break
+                with open("avito_apartments.csv", "a") as csv_file:
+                    writer = csv.writer(csv_file, delimiter=";")
+                    writer.writerow(data)
         except:
             url = "Не указано"
 
 
-def get_apartment_data(html):
-    soup = BeautifulSoup(html, "lxml")
-
-    title = get_title(soup)
-    if "сниму" not in title.lower():
-        address = get_address(soup)
-        sell_type, price = get_selling_info(soup)
-        rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = get_params(soup)
-        seller_type, seller_name = get_seller_info(soup)
-        images = get_photos(soup)
-        description = get_description(soup)
-
-        return (address, sell_type, block_type, rooms_number, floor_number, total_floors,
-              total_area, kitchen_area, living_area, price, seller_type, images,
-              description, seller_name)
-    return None
-
-
-def write_csv(data):
-    with open("avito_apartments.csv", "a") as csv_file:
-        writer = csv.writer(csv_file)
-        writer.write_row(data)
-
-
-def main():
+def parse_apartments():
     url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
     page_part = "p="
@@ -204,7 +180,48 @@ def main():
     #print(total_pages)
 
 
+def parse_cottages():
+    url_cottages = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?s=104&s_trg=3&bt=1"
+    base_url = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?"
+    page_part = "p="
+    parameters_part = "&s=104&s_trg=3&bt=1"
+
+
+def main():
+    with open("avito_apartments.csv", "a") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["Адрес", "Тип сделки", "Тип дома", "Количество комнат", "Этаж", "Этажей в доме",
+                        "Общая площадь", "Площадь кухни", "Жилая площадь", "Цена", "Право собственности",
+                        "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
+
+    parse_apartments()
+
+    #parse_cottages()
+
+
 if __name__ == "__main__":
-    #req_proxy = RequestProxy()
-    break_point = "1 день назад"
+    break_point = "1 день назад"  # на каких записях останавливаться
+
     main()
+
+    #querying phone
+    # url = "https://m.avito.ru/balakovo/kvartiry/2-k_kvartira_87_m_58_et._1653308606"
+    # headers = {
+    #     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36'}
+    #
+    # session = requests.session()
+    # resp = session.get(url, headers=headers)
+    #
+    # html = resp.text
+    # soup = BeautifulSoup(html, "lxml")
+    # href = soup.find_all("div", class_="clearfix")[-1].find("a").get("href")
+    # print(href)
+    #
+    # url = urljoin(resp.url, href + '?async')
+    # headers["Referer"] = url
+    # resp = session.get(url, headers=headers)
+    #
+    # html = resp.text
+    # #phone = html.xpath(".//*[@class='clearfix']/a[1]/span/text()")[0]
+    # phone = soup.find_all("div", class_="clearfix")
+    # print(phone)
