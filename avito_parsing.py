@@ -3,8 +3,14 @@ from bs4 import BeautifulSoup
 import csv
 import time
 import random
-from urllib.parse import urljoin
 from fake_useragent import UserAgent
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from PIL import Image
+from pytesseract import image_to_string
+import pytesseract
+import os
+import sys
 
 
 def get_html(url):
@@ -122,8 +128,32 @@ def get_description(soup):
     return description
 
 
-def get_seller_phone(soup):
-    pass
+def get_seller_phone(url):
+    # телефон показывается в виде картинки, используем selenium и pytesseract
+    pytesseract.pytesseract.tesseract_cmd = r"D:\Programs\Tesseract-OCR\tesseract.exe"
+
+    driver = webdriver.Chrome(executable_path=chrome_driver)
+
+    driver.get(url)
+    button = driver.find_element_by_xpath('//a[@class="button item-phone-button js-item-phone-button '
+                                          'button-origin button-origin-blue button-origin_full-width '
+                                          'button-origin_large-extra item-phone-button_hide-phone '
+                                          'item-phone-button_card js-item-phone-button_card"]')
+    button.click()
+    driver.implicitly_wait(3)
+    driver.save_screenshot("phone_number.png")
+
+    image = driver.find_element_by_xpath('//div[@class="item-phone-big-number js-item-phone-big-number"]//*')
+
+    cropped = Image.open("phone_number.png")
+    x, y = image.location["x"], image.location["y"]
+    width, height = image.size["width"], image.size["height"]
+    cropped.crop((x - 50, y, x - 50 + width, y + height)).save("phone.gif")
+
+    phone = Image.open("phone.gif")
+    phone_text = image_to_string(phone)
+
+    return phone_text
 
 
 def write_csv(data):
@@ -132,7 +162,7 @@ def write_csv(data):
         writer.writerow(data)
 
 
-def get_apartment_data(html):
+def get_apartment_data(url, html):
     soup = BeautifulSoup(html, "lxml")
 
     title = get_title(soup)
@@ -144,10 +174,11 @@ def get_apartment_data(html):
         seller_name = get_seller_name(soup)
         images = get_photos(soup)
         description = get_description(soup)
+        phone = get_seller_phone(url)
 
         return (address, sell_type, block_type, rooms_number, floor_number, total_floors,
               total_area, kitchen_area, living_area, price, seller_type, images,
-              description, seller_name)
+              description, seller_name, phone)
     return None
 
 
@@ -160,11 +191,11 @@ def crawl_page(html):
                 print("Парсинг квартир с avito завершен")
                 break
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
-            data = get_apartment_data(get_html(url))
+            data = get_apartment_data(url, get_html(url))
             print(data)
             if data is not None:
                 write_csv(data)
-            time.sleep(random.uniform(7, 11))
+            time.sleep(random.uniform(5, 8))
         except:
             url = "Не указано"
 
@@ -210,26 +241,12 @@ def main():
 if __name__ == "__main__":
     break_point = "1 день назад"  # на каких записях останавливаться
 
-    main()
+    # defining chrome options for selenium
+    options = Options()
+    options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
+    options.add_argument('--disable-gpu')
+    options.add_argument('--headless')
 
-    #querying phone
-    # url = "https://m.avito.ru/balakovo/kvartiry/2-k_kvartira_87_m_58_et._1653308606"
-    # headers = {
-    #     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36'}
-    #
-    # session = requests.session()
-    # resp = session.get(url, headers=headers)
-    #
-    # html = resp.text
-    # soup = BeautifulSoup(html, "lxml")
-    # href = soup.find_all("div", class_="clearfix")[-1].find("a").get("href")
-    # print(href)
-    #
-    # url = urljoin(resp.url, href + '?async')
-    # headers["Referer"] = url
-    # resp = session.get(url, headers=headers)
-    #
-    # html = resp.text
-    # #phone = html.xpath(".//*[@class='clearfix']/a[1]/span/text()")[0]
-    # phone = soup.find_all("div", class_="clearfix")
-    # print(phone)
+    chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
+    main()

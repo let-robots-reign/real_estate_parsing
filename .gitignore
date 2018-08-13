@@ -105,3 +105,6 @@ venv.bak/
 
 .idea/
 *.csv
+chromedriver.exe
+phone.gif
+phone_number.png
