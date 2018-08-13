@@ -61,6 +61,14 @@ def get_selling_info(soup):
     return sell_type, price
 
 
+def get_deposit(soup):
+    try:
+        deposit = soup.find("div", class_="item-price-sub-price").text.strip()
+    except:
+        deposit = "Не указано"
+    return deposit
+
+
 def get_seller_type(soup):
     try:
         seller_type = soup.find("div", class_="seller-info-prop seller-info-prop_short_margin")
@@ -177,7 +185,7 @@ def get_cottage_params(soup):
 
 
 def get_land_params(soup):
-    distance, area = ["Не указано"] * 3
+    distance, area = "Не указано", "Не указано"
     params = soup.find_all("li", class_="item-params-list-item")
     for i in range(len(params)):
         info = params[i].text.strip()
@@ -186,6 +194,18 @@ def get_land_params(soup):
         elif "Площадь" in info:
             area = info.split(":")[1].split("сот")[0].strip() + " сот"
     return distance, area
+
+
+def get_commercial_params(soup):
+    office_class, area = "Не указано", "Не указано"
+    params = soup.find_all("li", class_="item-params-list-item")
+    for i in range(len(params)):
+        info = params[i].text.strip()
+        if "Площадь" in info:
+            area = info.split(":")[1].split("м²")[0].strip()
+        elif "Класс здания" in info:
+            office_class = info.split(":")[1].strip()
+    return office_class, area
 
 
 def write_csv(data, category):
@@ -199,6 +219,10 @@ def write_csv(data, category):
             writer.writerow(data)
     elif category == "lands":
         with open("avito_lands.csv", "a") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow(data)
+    elif category == "commercials":
+        with open("avito_commercials.csv", "a") as csv_file:
             writer = csv.writer(csv_file, delimiter=";")
             writer.writerow(data)
 
@@ -245,14 +269,21 @@ def get_land_data(url, html):
     soup = BeautifulSoup(html, "lxml")
 
     title = get_title(soup)
-    # категория земель указывается в скобках в названии объявления
-    if "(" in title:
-        land_type = title[title.find("(") + 1:].split(")")[0]
-    else:
-        land_type = "Не указано"
     if "сниму" not in title.lower() and "куплю" not in title.lower():
+        # категория земель указывается в скобках в названии объявления
+        if "(" in title:
+            land_type = title[title.find("(") + 1:].split(")")[0]
+        else:
+            land_type = "Не указано"
+
         address = get_address(soup)
         sell_type, price = get_selling_info(soup)
+
+        if "Аренда" in sell_type:
+            deposit = get_deposit(soup)
+        else:
+            deposit = "Не аренда"
+
         distance, area = get_land_params(soup)
         seller_type = get_seller_type(soup)
         seller_name = get_seller_name(soup)
@@ -260,8 +291,55 @@ def get_land_data(url, html):
         description = get_description(soup)
         phone = get_seller_phone(url)
 
-        return (address, sell_type, land_type, distance, area, price, seller_type, images,
+        return (address, sell_type, deposit, land_type, distance, area, price, seller_type, images,
                 description, seller_name, phone)
+    return None
+
+
+def get_commercial_data(url, html):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    if "сниму" not in title.lower() and "куплю" not in title.lower():
+        # анализируем вид помещения по заголовку
+        if "офис" in title.lower():
+            object_type = "Офисное помещение"
+        elif "торг" in title.lower():
+            object_type = "Торговое помещение"
+        elif "гостиница" in title.lower():
+            object_type = "Гостиница"
+        elif "свобод" in title.lower():
+            object_type = "Помещение свободного назначения"
+        elif "производ" in title.lower():
+            object_type = "Производственное помещение"
+        elif "склад" in title.lower():
+            object_type = "Складское помещение"
+        else:
+            object_type = "Не указано"
+
+        address = get_address(soup)
+        sell_type, price = get_selling_info(soup)
+
+        if "Аренда" in sell_type:
+            deposit = get_deposit(soup)
+        else:
+            deposit = "Не аренда"
+
+        # если не офис, не заполняем поле office_class
+        if object_type == "Офисное помещение":
+            office_class, area = get_commercial_params(soup)
+        else:
+            _, area = get_commercial_params(soup)
+            office_class = "Не офис"
+
+        seller_type = get_seller_type(soup)
+        seller_name = get_seller_name(soup)
+        images = get_photos(soup)
+        description = get_description(soup)
+        phone = get_seller_phone(url)
+
+        return (address, sell_type, deposit, object_type, office_class, area, price, seller_type,
+                images, description, seller_name, phone)
     return None
 
 
@@ -283,10 +361,14 @@ def crawl_page(html, category):
                 data = get_cottage_data(url, get_html(url))
             elif category == "lands":
                 data = get_land_data(url, get_html(url))
+            elif category == "commercials":
+                data = get_commercial_data(url, get_html(url))
 
             print(data)
+
             if data is not None:
                 write_csv(data, category)
+
             time.sleep(random.uniform(5, 8))
         except:
             url = "Не указано"
@@ -324,7 +406,12 @@ def main():
 
     with open("avito_lands.csv", "w") as csv_file:
         writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Категория земель", "Расстояние до города", "Площадь участка", "Цена",
+        writer.writerow(["Адрес", "Тип сделки", "Залог", "Категория земель", "Расстояние до города", "Площадь участка", "Цена",
+                         "Право собственности", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
+
+    with open("avito_commercials.csv", "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["Адрес", "Тип сделки", "Залог", "Вид объекта", "Класс здания", "Площадь", "Цена",
                          "Право собственности", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
 
     url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
@@ -339,16 +426,20 @@ def main():
     base_url = "https://www.avito.ru/saratovskaya_oblast/zemelnye_uchastki?"
     parse(url_lands, base_url, "lands")
 
+    url_commercials = "https://www.avito.ru/saratovskaya_oblast/kommercheskaya_nedvizhimost?s=104&s_trg=3&bt=1"
+    base_url = "https://www.avito.ru/saratovskaya_oblast/kommercheskaya_nedvizhimost?"
+    parse(url_commercials, base_url, "commercials")
+
 
 if __name__ == "__main__":
     break_point = "1 день назад"  # на каких записях останавливаться
 
     # defining chrome options for selenium
-    options = Options()
-    options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    options.add_argument('--disable-gpu')
-    options.add_argument('--headless')
-
+    # options = Options()
+    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
+    # options.add_argument('--disable-gpu')
+    # options.add_argument('--headless')
+    #
     chrome_driver = os.getcwd() + "\\chromedriver.exe"
 
     main()
