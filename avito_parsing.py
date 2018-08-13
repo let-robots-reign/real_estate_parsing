@@ -43,7 +43,12 @@ def get_selling_info(soup):
             sell_type = "Аренда: длительный срок"
         else:
             sell_type = "Продажа"
-            price = soup.find("span", class_="js-item-price").text.strip() + " ₽"
+        price = soup.find("span", class_="js-item-price").text.strip()
+        # ошибка кодировки при записи, собираем сообщение вручную
+        if sell_type == "Аренда: посуточно":
+            price = "от " + price + " за сутки"
+        elif sell_type == "Аренда: длительный срок":
+            price = price + " в месяц"
     except:
         sell_type = "Не указано"
         price = "Не указано"
@@ -57,18 +62,18 @@ def get_params(soup):
         info = params[i].text.strip()
         if "Количество комнат" in info:
             rooms_number = info.split(":")[1].strip()
-        elif "Этаж" in info:
-            floor_number = info.split(":")[1].strip()
         elif "Этажей в доме" in info:
             total_floors = info.split(":")[1].strip()
+        elif "Этаж" in info:
+            floor_number = info.split(":")[1].strip()
         elif "Тип дома" in info:
             block_type = info.split(":")[1].strip()
         elif "Общая площадь" in info:
-            total_area = info.split(":")[1].strip()
+            total_area = info.split(":")[1].split("м²")[0].strip()
         elif "Площадь кухни" in info:
-            kitchen_area = info.split(":")[1].strip()
+            kitchen_area = info.split(":")[1].split("м²")[0].strip()
         elif "Жилая площадь" in info:
-            living_area = info.split(":")[1].strip()
+            living_area = info.split(":")[1].split("м²")[0].strip()
     return rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area
 
 
@@ -101,7 +106,11 @@ def get_photos(soup):
             images.append(link)
         images = "\n".join(images)
     except:
-        images = "Не указано"
+        # если нет фото, возьмем фото с "обложки"
+        try:
+            images = soup.find("span", class_="gallery-img-cover").get("style").split(":")[1].strip()[4:-2]
+        except:
+            images = "Не указано"
     return images
 
 
@@ -152,11 +161,10 @@ def crawl_page(html):
                 break
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
             data = get_apartment_data(get_html(url))
-            #print(data)
+            print(data)
             if data is not None:
-                with open("avito_apartments.csv", "a") as csv_file:
-                    writer = csv.writer(csv_file, delimiter=";")
-                    writer.writerow(data)
+                write_csv(data)
+            time.sleep(random.uniform(7, 11))
         except:
             url = "Не указано"
 
