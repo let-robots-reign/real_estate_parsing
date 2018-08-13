@@ -61,28 +61,6 @@ def get_selling_info(soup):
     return sell_type, price
 
 
-def get_params(soup):
-    rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = ["Не указано"] * 7
-    params = soup.find_all("li", class_="item-params-list-item")
-    for i in range(len(params)):
-        info = params[i].text.strip()
-        if "Количество комнат" in info:
-            rooms_number = info.split(":")[1].strip()
-        elif "Этажей в доме" in info:
-            total_floors = info.split(":")[1].strip()
-        elif "Этаж" in info:
-            floor_number = info.split(":")[1].strip()
-        elif "Тип дома" in info:
-            block_type = info.split(":")[1].strip()
-        elif "Общая площадь" in info:
-            total_area = info.split(":")[1].split("м²")[0].strip()
-        elif "Площадь кухни" in info:
-            kitchen_area = info.split(":")[1].split("м²")[0].strip()
-        elif "Жилая площадь" in info:
-            living_area = info.split(":")[1].split("м²")[0].strip()
-    return rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area
-
-
 def get_seller_type(soup):
     try:
         seller_type = soup.find("div", class_="seller-info-prop seller-info-prop_short_margin")
@@ -140,7 +118,7 @@ def get_seller_phone(url):
                                           'button-origin_large-extra item-phone-button_hide-phone '
                                           'item-phone-button_card js-item-phone-button_card"]')
     button.click()
-    driver.implicitly_wait(3)
+    driver.implicitly_wait(4)
     driver.save_screenshot("phone_number.png")
 
     image = driver.find_element_by_xpath('//div[@class="item-phone-big-number js-item-phone-big-number"]//*')
@@ -156,10 +134,57 @@ def get_seller_phone(url):
     return phone_text
 
 
-def write_csv(data):
-    with open("avito_apartments.csv", "a") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(data)
+def get_apartment_params(soup):
+    rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = ["Не указано"] * 7
+    params = soup.find_all("li", class_="item-params-list-item")
+    for i in range(len(params)):
+        info = params[i].text.strip()
+        if "Количество комнат" in info:
+            rooms_number = info.split(":")[1].strip()
+        elif "Этажей в доме" in info:
+            total_floors = info.split(":")[1].strip()
+        elif "Этаж" in info:
+            floor_number = info.split(":")[1].strip()
+        elif "Тип дома" in info:
+            block_type = info.split(":")[1].strip()
+        elif "Общая площадь" in info:
+            total_area = info.split(":")[1].split("м²")[0].strip()
+        elif "Площадь кухни" in info:
+            kitchen_area = info.split(":")[1].split("м²")[0].strip()
+        elif "Жилая площадь" in info:
+            living_area = info.split(":")[1].split("м²")[0].strip()
+    return rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area
+
+
+def get_cottage_params(soup):
+    house_type, total_floors, distance, material, total_area, land_area = ["Не указано"] * 6
+    params = soup.find_all("li", class_="item-params-list-item")
+    for i in range(len(params)):
+        info = params[i].text.strip()
+        if "Вид объекта" in info:
+            house_type = info.split(":")[1].strip()
+        elif "Этажей в доме" in info:
+            total_floors = info.split(":")[1].strip()
+        elif "Расстояние до города" in info:
+            distance = info.split(":")[1].split("км")[0].strip() + " км"
+        elif "Материал стен" in info:
+            material = info.split(":")[1].strip()
+        elif "Площадь дома" in info:
+            total_area = info.split(":")[1].split("м²")[0].strip()
+        elif "Площадь участка" in info:
+            land_area = info.split(":")[1].split("сот")[0].strip() + " сот"
+    return house_type, total_floors, distance, material, total_area, land_area
+
+
+def write_csv(data, category):
+    if category == "apartments":
+        with open("avito_apartments.csv", "a") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow(data)
+    elif category == "cottages":
+        with open("avito_cottages.csv", "a") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow(data)
 
 
 def get_apartment_data(url, html):
@@ -169,44 +194,67 @@ def get_apartment_data(url, html):
     if "сниму" not in title.lower() and "куплю" not in title.lower():
         address = get_address(soup)
         sell_type, price = get_selling_info(soup)
-        rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = get_params(soup)
+        rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = get_apartment_params(soup)
         seller_type = get_seller_type(soup)
         seller_name = get_seller_name(soup)
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url)
 
-        return (address, sell_type, block_type, rooms_number, floor_number, total_floors,
-              total_area, kitchen_area, living_area, price, seller_type, images,
-              description, seller_name, phone)
+        return (address, sell_type, block_type, rooms_number, floor_number, total_floors, total_area,
+                kitchen_area, living_area, price, seller_type, images, description, seller_name, phone)
     return None
 
 
-def crawl_page(html):
+def get_cottage_data(url, html):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    if "сниму" not in title.lower() and "куплю" not in title.lower():
+        address = get_address(soup)
+        sell_type, price = get_selling_info(soup)
+        house_type, total_floors, distance, material, total_area, land_area = get_cottage_params(soup)
+        seller_type = get_seller_type(soup)
+        seller_name = get_seller_name(soup)
+        images = get_photos(soup)
+        description = get_description(soup)
+        phone = get_seller_phone(url)
+
+        return (address, sell_type, material, total_floors, total_area, land_area, price, distance,
+                seller_type, images, description, seller_name, phone)
+    return None
+
+
+def crawl_page(html, category):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
     for offer in offers:
         try:
+            # TODO: проверить еще на дубликат
             if offer.find("div", class_="js-item-date c-2").text.strip() == break_point:
-                print("Парсинг квартир с avito завершен")
+                print("Парсинг завершен")
                 break
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
-            data = get_apartment_data(url, get_html(url))
+
+            data = []
+            if category == "apartments":
+                data = get_apartment_data(url, get_html(url))
+            elif category == "cottages":
+                data = get_cottage_data(url, get_html(url))
+
             print(data)
             if data is not None:
-                write_csv(data)
+                write_csv(data, category)
             time.sleep(random.uniform(5, 8))
         except:
             url = "Не указано"
 
 
-def parse_apartments():
-    url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
-    base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
+def parse(category_url, base_url, category_name):
     page_part = "p="
     parameters_part = "&s=104&s_trg=3&bt=1"
 
-    total_pages = get_total_pages(get_html(url_apartments))
+    total_pages = get_total_pages(get_html(category_url))
 
     # for page in range(1, total_pages + 1):
     #     url_gen = base_url + page_part + str(page) + parameters_part
@@ -214,28 +262,31 @@ def parse_apartments():
 
     for page in range(1):
         url_gen = base_url + page_part + str(page) + parameters_part
-        crawl_page(get_html(url_gen))
+        crawl_page(get_html(url_gen), category_name)
 
     #print(total_pages)
 
 
-def parse_cottages():
-    url_cottages = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?s=104&s_trg=3&bt=1"
-    base_url = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?"
-    page_part = "p="
-    parameters_part = "&s=104&s_trg=3&bt=1"
-
-
 def main():
-    with open("avito_apartments.csv", "a") as csv_file:
+    with open("avito_apartments.csv", "w") as csv_file:
         writer = csv.writer(csv_file, delimiter=";")
         writer.writerow(["Адрес", "Тип сделки", "Тип дома", "Количество комнат", "Этаж", "Этажей в доме",
                         "Общая площадь", "Площадь кухни", "Жилая площадь", "Цена", "Право собственности",
                         "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
 
-    parse_apartments()
+    with open("avito_cottages.csv", "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["Адрес", "Тип сделки", "Материал стен", "Этажей в доме", "Площадь дома", "Площадь участка",
+                         "Цена", "Расстояние до города", "Право собственности", "Фотографии", "Описание", "Имя продавца",
+                         "Номер телефона"])
 
-    #parse_cottages()
+    url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
+    base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
+    parse(url_apartments, base_url, "apartments")
+
+    url_cottages = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?s=104&s_trg=3&bt=1"
+    base_url = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?"
+    parse(url_cottages, base_url, "cottages")
 
 
 if __name__ == "__main__":
