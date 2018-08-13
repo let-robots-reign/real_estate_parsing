@@ -176,6 +176,18 @@ def get_cottage_params(soup):
     return house_type, total_floors, distance, material, total_area, land_area
 
 
+def get_land_params(soup):
+    distance, area = ["Не указано"] * 3
+    params = soup.find_all("li", class_="item-params-list-item")
+    for i in range(len(params)):
+        info = params[i].text.strip()
+        if "Расстояние до города" in info:
+            distance = info.split(":")[1].split("км")[0].strip() + " км"
+        elif "Площадь" in info:
+            area = info.split(":")[1].split("сот")[0].strip() + " сот"
+    return distance, area
+
+
 def write_csv(data, category):
     if category == "apartments":
         with open("avito_apartments.csv", "a") as csv_file:
@@ -183,6 +195,10 @@ def write_csv(data, category):
             writer.writerow(data)
     elif category == "cottages":
         with open("avito_cottages.csv", "a") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow(data)
+    elif category == "lands":
+        with open("avito_lands.csv", "a") as csv_file:
             writer = csv.writer(csv_file, delimiter=";")
             writer.writerow(data)
 
@@ -225,6 +241,30 @@ def get_cottage_data(url, html):
     return None
 
 
+def get_land_data(url, html):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    # категория земель указывается в скобках в названии объявления
+    if "(" in title:
+        land_type = title[title.find("(") + 1:].split(")")[0]
+    else:
+        land_type = "Не указано"
+    if "сниму" not in title.lower() and "куплю" not in title.lower():
+        address = get_address(soup)
+        sell_type, price = get_selling_info(soup)
+        distance, area = get_land_params(soup)
+        seller_type = get_seller_type(soup)
+        seller_name = get_seller_name(soup)
+        images = get_photos(soup)
+        description = get_description(soup)
+        phone = get_seller_phone(url)
+
+        return (address, sell_type, land_type, distance, area, price, seller_type, images,
+                description, seller_name, phone)
+    return None
+
+
 def crawl_page(html, category):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
@@ -241,6 +281,8 @@ def crawl_page(html, category):
                 data = get_apartment_data(url, get_html(url))
             elif category == "cottages":
                 data = get_cottage_data(url, get_html(url))
+            elif category == "lands":
+                data = get_land_data(url, get_html(url))
 
             print(data)
             if data is not None:
@@ -280,6 +322,11 @@ def main():
                          "Цена", "Расстояние до города", "Право собственности", "Фотографии", "Описание", "Имя продавца",
                          "Номер телефона"])
 
+    with open("avito_lands.csv", "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["Адрес", "Тип сделки", "Категория земель", "Расстояние до города", "Площадь участка", "Цена",
+                         "Право собственности", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
+
     url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
     parse(url_apartments, base_url, "apartments")
@@ -287,6 +334,10 @@ def main():
     url_cottages = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?"
     parse(url_cottages, base_url, "cottages")
+
+    url_lands = "https://www.avito.ru/saratovskaya_oblast/zemelnye_uchastki?s=104&s_trg=3&bt=1"
+    base_url = "https://www.avito.ru/saratovskaya_oblast/zemelnye_uchastki?"
+    parse(url_lands, base_url, "lands")
 
 
 if __name__ == "__main__":
