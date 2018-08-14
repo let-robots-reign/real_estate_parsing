@@ -15,7 +15,11 @@ def get_html(url):
 
 def get_total_pages(html):
     soup = BeautifulSoup(html, "lxml")
-    total_pages = soup.find("div", class_="pagination__pages").find_all("a", class_="pagination__pagesLink")[-1].text.strip()
+    total_pages = soup.find("div", class_="pagination__pages")
+    if total_pages is not None:
+        total_pages = total_pages.find_all("a", class_="pagination__pagesLink")[-1].text.strip()
+    else:
+        total_pages = 0
     return int(total_pages)
 
 
@@ -50,7 +54,10 @@ def get_material(soup):
 
 def get_price(soup):
     try:
-        price = " ".join(soup.find("div", class_="productPage__price js-contentPrice").text.strip().split("\xa0"))
+        price = " ".join(soup.find("div", class_="productPage__price").text.strip().split("\xa0"))
+        fee = soup.find("div", class_="productPage__fee")
+        if fee is not None:
+            price += " (" + fee.text.strip() + ")"
     except:
         price = "Не указано"
     return price
@@ -91,12 +98,39 @@ def get_description(soup):
     return description
 
 
+def get_date(soup):
+    try:
+        relative_date = soup.find("div", class_="productPage__createDate").find("span").text.strip().split(",")
+        if relative_date[0] == "сегодня":
+            date = str(datetime.datetime.today()).split()[0] + relative_date[1]
+        else:
+            date = str(datetime.datetime.today() - datetime.timedelta(days=2)).split()[0] + relative_date[1]
+    except:
+        date = "Не указано"
+    return date
+
+
 def get_seller_phone(soup):
     try:
         ciphered_phone = soup.find("input", {"class": "js-backendVar", "name": "phoneBase64"}).get("value")
     except:
         ciphered_phone = "Не указано"
     return base64.b64decode(ciphered_phone).decode("utf-8")
+
+
+def write_csv(data, category):
+    if category == "apartments":
+        with open("irr_apartments.csv", "a") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow(data)
+    elif category == "cottages":
+        with open("irr_cottages.csv", "a") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow(data)
+    elif category == "commercials":
+        with open("irr_commercials.csv", "a") as csv_file:
+            writer = csv.writer(csv_file, delimiter=";")
+            writer.writerow(data)
 
 
 def get_apartment_params(soup):
@@ -129,26 +163,60 @@ def get_apartment_params(soup):
     return rooms_number, floor, total_area, kitchen_area, living_area, furnish
 
 
-def write_csv(data, category):
-    if category == "apartments":
-        with open("irr_apartments.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "cottages":
-        with open("irr_cottages.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "lands":
-        with open("irr_lands.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "commercials":
-        with open("irr_commercials.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
+def get_commercial_params(soup):
+    building_type, parking, ceilings, area = ["Не указано"] * 4
+    try:
+        building_params = []
+        divs = soup.find_all("div", class_="productPage__infoColumnBlock js-columnBlock")
+        for i in range(len(divs)):
+            building_params.extend(divs[i].find_all("li", class_="productPage__infoColumnBlockText"))
+
+        for i in range(len(building_params)):
+            info = building_params[i].text.strip()
+            if "Тип здания" in info:
+                building_type = info.split(":")[1].strip()
+            elif "Общая площадь" in info:
+                area = info.split(":")[1].strip()
+            elif "Парковка" in info:
+                parking = "Парковка есть"
+            elif "Высота потолков" in info:
+                ceilings = info.split(":")[1].strip()
+    except:
+        pass
+    return building_type, parking, ceilings, area
 
 
-def get_apartment_data(url, html):
+def get_cottage_params(soup):
+    house_area, material, total_floors, land_area, status, comforts = ["Не указано"] * 6
+    try:
+        building_params = []
+        divs = soup.find_all("div", class_="productPage__infoColumnBlock js-columnBlock")
+        for i in range(len(divs)):
+            building_params.extend(divs[i].find_all("li", class_="productPage__infoColumnBlockText"))
+        for i in range(len(building_params)):
+            info = building_params[i].text.strip()
+            if "Площадь участка" in info:
+                land_area = info.split(":")[1].strip()
+            elif "Площадь строения" in info:
+                house_area = info.split(":")[1].strip()
+            elif "Материал стен" in info:
+                material = info.split(":")[1].strip()
+            elif "Количество этажей" in info:
+                total_floors = info.split(":")[1].strip()
+            elif "Вид разрешенного использования" in info:
+                status = info.split(":")[1].strip()
+            elif any(x in info.lower() for x in ["отапливаемый", "отопление", "водопровод", "канализация",
+                                                 "свет", "газ", "вода", "интернет", "телефон"]):
+                if comforts == "Не указано":
+                    comforts = info.strip()
+                else:
+                    comforts += "; " + info.strip()
+    except:
+        pass
+    return house_area, material, total_floors, land_area, status, comforts
+
+
+def get_apartment_data(html):
     soup = BeautifulSoup(html, "lxml")
 
     #title = get_title(soup)
@@ -165,6 +233,66 @@ def get_apartment_data(url, html):
             price, seller_type, images, description, seller_name, phone]
 
 
+def get_commercial_data(html):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    # анализируем вид помещения по заголовку
+    if "офис" in title.lower():
+        object_type = "Офисное помещение"
+    elif "торг" in title.lower():
+        object_type = "Торговое помещение"
+    elif "гостиница" in title.lower():
+        object_type = "Гостиница"
+    elif "производ" in title.lower():
+        object_type = "Производственное помещение"
+    elif "склад" in title.lower():
+        object_type = "Складское помещение"
+    elif "помещение" in title.lower():
+        object_type = "Помещение свободного назначения"
+    else:
+        object_type = "Не указано"
+
+    address = get_address(soup)
+    building_type, parking, ceilings, area = get_commercial_params(soup)
+    price = get_price(soup)
+    seller_type, seller_name = get_seller_info(soup)
+    images = get_photos(soup)
+    description = get_description(soup)
+    phone = get_seller_phone(soup)
+
+    return [address, object_type, building_type, parking, ceilings, area, price, seller_type, images,
+            description, seller_name, phone]
+
+
+def get_cottage_data(html):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+
+    # определим тип объекта по заголовку
+    if "дом" in title.lower():
+        object_type = "Дом"
+    elif "участок" in title.lower():
+        object_type = "Участок"
+    elif "таунхаус" in title.lower():
+        object_type = "Таунхаус"
+    else:
+        object_type = "Не указано"
+
+    address = get_address(soup)
+    price = get_price(soup)
+    house_area, material, total_floors, land_area, status, comforts = get_cottage_params(soup)
+    _, seller_name = get_seller_info(soup)
+    date = get_date(soup)
+    images = get_photos(soup)
+    description = get_description(soup)
+    phone = get_seller_phone(soup)
+
+    return [address, object_type, price, house_area, material, total_floors, land_area, status, comforts,
+            images, description, date, seller_name, phone]
+
+
 def crawl_page(html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="listing js-productGrid ").find_all("div", class_="listing__item")
@@ -178,13 +306,11 @@ def crawl_page(html, category, sell_type):
 
             data = []
             if category == "apartments":
-                data = get_apartment_data(url, get_html(url))
-            # elif category == "cottages":
-            #     data = get_cottage_data(url, get_html(url))
-            # elif category == "lands":
-            #     data = get_land_data(url, get_html(url))
-            # elif category == "commercials":
-            #     data = get_commercial_data(url, get_html(url))
+                data = get_apartment_data(get_html(url))
+            elif category == "commercials":
+                data = get_commercial_data(get_html(url))
+            elif category == "cottages":
+                data = get_cottage_data(get_html(url))
 
             data.insert(1, sell_type)
             print(data)
@@ -194,13 +320,10 @@ def crawl_page(html, category, sell_type):
             time.sleep(random.uniform(5, 8))
         except Exception as e:
             print(e)
-            url = "Не указано"
+            print("Ошибка в crawl_page")
 
 
-def parse(category_url, category_name):
-    # на сайте есть разделения продажа/аренда
-    # сначала распарсим страницу с предложениями продажи
-    sell_type = "Продажа"
+def parse(category_url, category_name, sell_type):
     page_part = "page"
 
     total_pages = get_total_pages(get_html(category_url))
@@ -223,8 +346,36 @@ def main():
                          "Общая площадь", "Площадь кухни", "Жилая площадь", "Отделка", "Цена",
                          "Тип объявления", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
 
-    url_apartments = "https://saratovskaya-obl.irr.ru/real-estate/apartments-sale/sort/date_sort:desc/"
-    parse(url_apartments, "apartments")
+    with open("irr_commercials.csv", "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["Адрес", "Тип сделки", "Тип недвижимости", "Тип здания", "Парковка", "Высота потолков",
+                         "Площадь", "Цена", "Право собственности", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
+
+    with open("irr_cottages.csv", "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["Адрес", "Тип сделки", "Тип объекта", "Цена", "Общая площадь", "Материал стен",
+                         "Количество этажей", "Площадь участка", "Статус участка", "Удобства", "Фотографии",
+                         "Описание", "Дата", "Имя продавца", "Номер телефона"])
+
+    # на сайте есть разделения продажа/аренда
+    # сначала парсим страницу с предложениями продажи
+    url_apartments_sell = "https://saratovskaya-obl.irr.ru/real-estate/apartments-sale/sort/date_sort:desc/"
+    parse(url_apartments_sell, "apartments", "Продажа")
+
+    url_apartments_rent = "https://saratovskaya-obl.irr.ru/real-estate/rent/sort/date_sort:desc/"
+    parse(url_apartments_rent, "apartments", "Аренда")
+
+    url_commercials_sell = "https://saratovskaya-obl.irr.ru/real-estate/commercial-sale/sort/date_sort:desc/"
+    parse(url_commercials_sell, "commercials", "Продажа")
+
+    url_commercials_rent = "https://saratovskaya-obl.irr.ru/real-estate/commercial/sort/date_sort:desc/"
+    parse(url_commercials_rent, "commercials", "Аренда")
+
+    url_cottages_sell = "https://saratovskaya-obl.irr.ru/real-estate/out-of-town/sort/date_sort:desc/"
+    parse(url_cottages_sell, "cottages", "Продажа")
+
+    url_cottages_rent = "https://saratovskaya-obl.irr.ru/real-estate/out-of-town-rent/sort/date_sort:desc/"
+    parse(url_cottages_rent, "cottages", "Аренда")
 
 
 if __name__ == "__main__":
