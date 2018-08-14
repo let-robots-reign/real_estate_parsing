@@ -186,24 +186,28 @@ def get_cottage_params(soup):
 
 def get_land_params(soup):
     distance, area = "Не указано", "Не указано"
-    params = soup.find_all("li", class_="item-params-list-item")
+    labels = soup.find_all("span", class_="item-params-label")
+    params = soup.find("div", class_="item-params").find_all("span")
     for i in range(len(params)):
         info = params[i].text.strip()
-        if "Расстояние до города" in info:
-            distance = info.split(":")[1].split("км")[0].strip() + " км"
-        elif "Площадь" in info:
-            area = info.split(":")[1].split("сот")[0].strip() + " сот"
+        label = labels[i].text.strip()
+        if "Расстояние до города" in label:
+            distance = info.split("км")[0].strip() + " км"
+        elif "Площадь" in label:
+            area = info.split("сот")[0].strip() + " сот"
     return distance, area
 
 
 def get_commercial_params(soup):
     office_class, area = "Не указано", "Не указано"
-    params = soup.find_all("li", class_="item-params-list-item")
+    labels = soup.find_all("span", class_="item-params-label")
+    params = soup.find("div", class_="item-params").find_all("span")
     for i in range(len(params)):
         info = params[i].text.strip()
-        if "Площадь" in info:
+        label = labels[i].text.strip()
+        if "Площадь" in label:
             area = info.split(":")[1].split("м²")[0].strip()
-        elif "Класс здания" in info:
+        elif "Класс здания" in label:
             office_class = info.split(":")[1].strip()
     return office_class, area
 
