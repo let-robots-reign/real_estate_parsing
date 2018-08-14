@@ -19,8 +19,13 @@ def get_html(url):
 
 def get_total_pages(html):
     soup = BeautifulSoup(html, "lxml")
-    pages = soup.find("div", class_="pagination-pages clearfix").find_all("a", class_="pagination-page")[-1].get("href")
-    total_pages = int(pages.split("=")[1].split("&")[0])
+    try:
+        pages = soup.find("div", class_="pagination-pages clearfix").find_all("a", class_="pagination-page")[-1].get("href")
+        total_pages = int(pages.split("=")[1].split("&")[0])
+    except Exception as e:
+        print("Ошибка в get_total_pages")
+        print(e)
+        sys.exit(0)
     return total_pages
 
 
@@ -42,11 +47,14 @@ def get_address(soup):
 
 def get_selling_info(soup):
     try:
+        per_meter = False
         price = soup.find("span", class_="price-value-string js-price-value-string").text.strip()
         if "за сутки" in price:
             sell_type = "Аренда: посуточно"
         elif "в месяц" in price:
             sell_type = "Аренда: длительный срок"
+            if "за " in price:
+                per_meter = True
         else:
             sell_type = "Продажа"
         price = soup.find("span", class_="js-item-price").text.strip()
@@ -54,7 +62,10 @@ def get_selling_info(soup):
         if sell_type == "Аренда: посуточно":
             price = "от " + price + " за сутки"
         elif sell_type == "Аренда: длительный срок":
-            price = price + " в месяц"
+            if per_meter:
+                price = price + " в месяц за м2"
+            else:
+                price = price + " в месяц"
     except:
         sell_type = "Не указано"
         price = "Не указано"
@@ -126,7 +137,7 @@ def get_seller_phone(url):
                                           'button-origin_large-extra item-phone-button_hide-phone '
                                           'item-phone-button_card js-item-phone-button_card"]')
     button.click()
-    driver.implicitly_wait(4)
+    driver.implicitly_wait(5)
     driver.save_screenshot("phone_number.png")
 
     image = driver.find_element_by_xpath('//div[@class="item-phone-big-number js-item-phone-big-number"]//*')
@@ -139,76 +150,90 @@ def get_seller_phone(url):
     phone = Image.open("phone.gif")
     phone_text = image_to_string(phone)
 
+    driver.quit()
+
     return phone_text
 
 
 def get_apartment_params(soup):
     rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = ["Не указано"] * 7
-    params = soup.find_all("li", class_="item-params-list-item")
-    for i in range(len(params)):
-        info = params[i].text.strip()
-        if "Количество комнат" in info:
-            rooms_number = info.split(":")[1].strip()
-        elif "Этажей в доме" in info:
-            total_floors = info.split(":")[1].strip()
-        elif "Этаж" in info:
-            floor_number = info.split(":")[1].strip()
-        elif "Тип дома" in info:
-            block_type = info.split(":")[1].strip()
-        elif "Общая площадь" in info:
-            total_area = info.split(":")[1].split("м²")[0].strip()
-        elif "Площадь кухни" in info:
-            kitchen_area = info.split(":")[1].split("м²")[0].strip()
-        elif "Жилая площадь" in info:
-            living_area = info.split(":")[1].split("м²")[0].strip()
+    try:
+        params = soup.find_all("li", class_="item-params-list-item")
+        for i in range(len(params)):
+            info = params[i].text.strip()
+            if "Количество комнат" in info:
+                rooms_number = info.split(":")[1].strip()
+            elif "Этажей в доме" in info:
+                total_floors = info.split(":")[1].strip()
+            elif "Этаж" in info:
+                floor_number = info.split(":")[1].strip()
+            elif "Тип дома" in info:
+                block_type = info.split(":")[1].strip()
+            elif "Общая площадь" in info:
+                total_area = info.split(":")[1].split("м²")[0].strip()
+            elif "Площадь кухни" in info:
+                kitchen_area = info.split(":")[1].split("м²")[0].strip()
+            elif "Жилая площадь" in info:
+                living_area = info.split(":")[1].split("м²")[0].strip()
+    except:
+        pass
     return rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area
 
 
 def get_cottage_params(soup):
     house_type, total_floors, distance, material, total_area, land_area = ["Не указано"] * 6
-    params = soup.find_all("li", class_="item-params-list-item")
-    for i in range(len(params)):
-        info = params[i].text.strip()
-        if "Вид объекта" in info:
-            house_type = info.split(":")[1].strip()
-        elif "Этажей в доме" in info:
-            total_floors = info.split(":")[1].strip()
-        elif "Расстояние до города" in info:
-            distance = info.split(":")[1].split("км")[0].strip() + " км"
-        elif "Материал стен" in info:
-            material = info.split(":")[1].strip()
-        elif "Площадь дома" in info:
-            total_area = info.split(":")[1].split("м²")[0].strip()
-        elif "Площадь участка" in info:
-            land_area = info.split(":")[1].split("сот")[0].strip() + " сот"
+    try:
+        params = soup.find_all("li", class_="item-params-list-item")
+        for i in range(len(params)):
+            info = params[i].text.strip()
+            if "Вид объекта" in info:
+                house_type = info.split(":")[1].strip()
+            elif "Этажей в доме" in info:
+                total_floors = info.split(":")[1].strip()
+            elif "Расстояние до города" in info:
+                distance = info.split(":")[1].split("км")[0].strip() + " км"
+            elif "Материал стен" in info:
+                material = info.split(":")[1].strip()
+            elif "Площадь дома" in info:
+                total_area = info.split(":")[1].split("м²")[0].strip()
+            elif "Площадь участка" in info:
+                land_area = info.split(":")[1].split("сот")[0].strip() + " сот"
+    except:
+        pass
     return house_type, total_floors, distance, material, total_area, land_area
 
 
 def get_land_params(soup):
     distance, area = "Не указано", "Не указано"
-    labels = soup.find_all("span", class_="item-params-label")
-    params = soup.find("div", class_="item-params").find_all("span")
-    for i in range(len(params)):
-        info = params[i].text.strip()
-        label = labels[i].text.strip()
-        if "Расстояние до города" in label:
-            distance = info.split("км")[0].strip() + " км"
-        elif "Площадь" in label:
-            area = info.split("сот")[0].strip() + " сот"
+    try:
+        labels = soup.find_all("span", class_="item-params-label")
+        params = soup.find("div", class_="item-params").find_all("span")
+        for i in range(len(labels)):
+            info = params[i * 2].text.strip()
+            label = labels[i].text.strip()
+            if "Расстояние до города" in label:
+                distance = info.split("км")[0].strip() + " км"
+            elif "Площадь" in label:
+                area = info.split("сот")[0].strip() + " сот"
+    except:
+        pass
     return distance, area
 
 
 def get_commercial_params(soup):
     office_class, area = "Не указано", "Не указано"
-    labels = soup.find_all("span", class_="item-params-label")
-    params = soup.find("div", class_="item-params").find_all("span")
-    for i in range(len(params)):
-        info = params[i].text.strip()
-        label = labels[i].text.strip()
-        if "Площадь" in label:
-            area = info.split(":")[1].split("м²")[0].strip()
-        elif "Класс здания" in label:
-            office_class = info.split(":")[1].strip()
+    try:
+        labels = soup.find_all("span", class_="item-params-label")
+        params = soup.find("div", class_="item-params").find_all("span")
+        for i in range(len(labels)):
+            info = params[i * 2].text.strip()
+            label = labels[i].text.strip()
+            if "Площадь" in label:
+                area = info.split(":")[1].split("м²")[0].strip()
+            elif "Класс здания" in label:
+                office_class = info.split(":")[1].strip()
+    except:
+        pass
     return office_class, area
 
 
@@ -374,8 +399,10 @@ def crawl_page(html, category):
                 write_csv(data, category)
 
             time.sleep(random.uniform(5, 8))
-        except:
-            url = "Не указано"
+        except Exception as e:
+            print("Ошибка в crawl_page")
+            print(e)
+            #sys.exit(0)
 
 
 def parse(category_url, base_url, category_name):
