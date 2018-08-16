@@ -20,22 +20,7 @@ def transform_date(date_str):
     if month[0] == "0":
         month = month[1]
 
-    months = {
-        "1": "Jan",
-        "2": "Feb",
-        "3": "Mar",
-        "4": "Apr",
-        "5": "May",
-        "6": "June",
-        "7": "July",
-        "8": "Aug",
-        "9": "Sept",
-        "10": "Oct",
-        "11": "Nov",
-        "12": "Dec"
-    }
-
-    date = datetime.datetime.strptime("{} {} {}".format(months[month], day, year), "%B %d %Y")
+    date = datetime.datetime(int(year), int(month), int(day))
     return date
 
 
@@ -70,10 +55,18 @@ def get_price(soup):
 
 def get_selling_type(soup):
     try:
+        # если продажа, ищем тип продажи
         selling_type = "; ".join([x.text.strip() for x in soup.find("td", class_="tddec2").find_all("span", class_="d")])
+        # если аренда - срок аренды
+        rent_info = [x.text.strip() for x in soup.find_all("td", class_="tddec2")[-2].find_all("span", class_="d")]
+        for info in rent_info:
+            if "аренда" in info:
+                rent_info = info
+                break
     except:
         selling_type = "Не указано"
-    return selling_type
+        rent_info = "Не указано"
+    return selling_type, rent_info
 
 
 def get_photos(soup):
@@ -105,27 +98,40 @@ def get_date(soup):
     try:
         date = soup.find("div", class_="tdate").text.strip().split(",")[1].split("VIP")[0].split("создано")[1].strip()
         date = transform_date(date)
-    except:
+    except Exception as e:
+        print(e)
         date = "Не указано"
     return date
 
 
-def get_seller_phone(url):
+def get_seller_phone(url, soup):
     phone = "Не указано"
     # телефон появляется динамически, используем selenium
     try:
-        driver = webdriver.Chrome(executable_path=chrome_driver)
+        # иногда посредники указывают телефон в самом тексте; проверяем это
+        tddec = soup.find_all("td", class_="tddec2")[-1].find_all(text=True)
+        found = False
+        for i in range(len(tddec)):
+            if "Персона для контактов" in tddec[i]:
+                phone = tddec[i + 1].split(",")[-1].strip()
+                found = True
+            elif "Контактный телефон" in tddec[i]:
+                found = False
 
-        driver.get(url)
-        button = driver.find_element_by_xpath('//span[@class="showphone"]')
-        button.click()
-        time.sleep(3)
-        seller_info = driver.find_elements_by_xpath('//td[@class="tddec2"]')[-1].text
-        for info in seller_info.split("\n"):
-            if "Контактный телефон" in info:
-                phone = info.split(":")[1].strip()
-    except:
-        pass
+        if not found:
+
+            driver = webdriver.Chrome(executable_path=chrome_driver)
+
+            driver.get(url)
+            button = driver.find_element_by_xpath('//span[@class="showphone"]')
+            button.click()
+            time.sleep(3)
+            seller_info = driver.find_elements_by_xpath('//td[@class="tddec2"]')[-1].text
+            for info in seller_info.split("\n"):
+                if "Контактный телефон" in info:
+                    phone = info.split(":")[1].strip()
+    except Exception as e:
+        print(e)
     return phone
 
 
@@ -143,11 +149,11 @@ def get_apartment_params(soup):
         add_info = ""  # дата сдачи, застройщик (указываем в одноц графе)
         for param in params:
             if "Площадь общая" in param:
-                total_area = param.split(":")[1].split("м²")[0] + " м2"
+                total_area = param.split(":")[1].split("м²")[0].strip() + " м2"
             elif "этажей в доме" in param:
                 total_floors = param.split(":")[1].split("/")[1]
             elif "cтроение" in param:
-                material = param.split(":")[1]
+                material = param.split(":")[1].strip()
             elif "Застройщик" in param or "Дата сдачи" in param or "Стадия строительства" in param:
                 new_block = True
                 add_info += param.split(":")[1] + ";"
@@ -181,16 +187,21 @@ def get_apartment_data(html, url):
 
     title = get_title(soup)
     address = "".join(title.split(",")[1:]).strip()
+    address = address[:address.rfind(" на карте")]
+    if "сдам" in address.lower():
+        address = " ".join(address.split()[1:])
     rooms_number = title.split(",")[0]
     block_type, total_area, total_floors, material = get_apartment_params(soup)
     price = get_price(soup)
-    selling_type = get_selling_type(soup)  # чистая продажа/ипотека/без посредников
+    selling_type, rent_info = get_selling_type(soup)  # чистая продажа/ипотека/без посредников; если аренда, срок аренды
+    if not selling_type:
+        selling_type = "Не продажа"
     images = get_photos(soup)
     description = get_description(soup)
-    phone = get_seller_phone(url)
+    phone = get_seller_phone(url, soup)
     date = get_date(soup)
 
-    return [address, price, block_type, rooms_number, total_area, total_floors, material, selling_type,
+    return [address, rent_info, price, block_type, rooms_number, total_area, total_floors, material, selling_type,
             images, description, phone, date]
 
 
@@ -208,17 +219,21 @@ def crawl_page(html, category, sell_type):
             # elif category == "cottages":
             #     data = get_cottage_data(get_html(url))
 
-            data.insert(1, sell_type)
+            if sell_type == "Аренда":
+                data.insert(1, sell_type + "; " + data[1])  # прибавляем срок аренды
+            else:
+                data.insert(1, sell_type)
+            data.pop(2)  # и удаляем срок аренды как отдельный элемент списка
 
             # if data[-1] < datetime.datetime.today():
-            #     # сраниваем форматы datetime, чтобы знать, когда закончить
+            #     # сраниваем форматы datetime, чтобы знать, когда закончить парсинг
             #     print("Парсинг завершен")
             #     break
             # else:
             #     # переводим в строковый формат
             #     data[-1] = str(data[-1])
 
-            data[-1] = str(data[-1]).split()[0]
+            data[-1] = str(data[-1]).split()[0]  # форматируем дату после проверки
             print(data)
 
             write_csv(data, category)
@@ -252,6 +267,9 @@ def main():
 
     url_apartments_sell = "http://kvadrat64.ru/sellflatbank-50-1.html"
     parse(url_apartments_sell, "apartments", "Продажа")
+
+    url_apartments_rent = "https://kvadrat64.ru/giveflatbank-50-1.html"
+    parse(url_apartments_rent, "apartments", "Аренда")
 
 
 if __name__ == "__main__":
