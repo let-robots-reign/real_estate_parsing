@@ -32,10 +32,14 @@ def get_html(url):
 
 def get_total_pages(html):
     soup = BeautifulSoup(html, "lxml")
-    total_pages = soup.find("div", class_="a t100")
-    if total_pages is not None:
-        total_pages = total_pages.find_all("a", class_="phase")[-1].text.strip()
-    else:
+    try:
+        total_pages = soup.find("div", class_="a t100")
+        if total_pages is not None:
+            total_pages = total_pages.find_all("a", class_="phase")[-1].text.strip()
+        else:
+            total_pages = 0
+    except Exception as e:
+        print(e, "total_pages")
         total_pages = 0
     return int(total_pages)
 
@@ -96,10 +100,14 @@ def get_description(soup):
 
 def get_date(soup):
     try:
-        date = soup.find("div", class_="tdate").text.strip().split(",")[1].split("VIP")[0].split("создано")[1].strip()
+        date = soup.find("div", class_="tdate").text.strip().split(",")[1]
+        if "сделать" in date:
+            date = date.split("сделать")[0].split("создано")[1].strip()
+        else:
+            date = date.split("VIP")[0].split("создано")[1].strip()
         date = transform_date(date)
     except Exception as e:
-        print(e)
+        print(e, "date")
         date = "Не указано"
     return date
 
@@ -118,6 +126,9 @@ def get_seller_phone(url, soup):
             elif "Контактный телефон" in tddec[i]:
                 found = False
 
+        if "".join(phone.split()).isalpha():
+            phone = "Не указано"
+
         if not found:
 
             driver = webdriver.Chrome(executable_path=chrome_driver)
@@ -131,7 +142,8 @@ def get_seller_phone(url, soup):
                 if "Контактный телефон" in info:
                     phone = info.split(":")[1].strip()
     except Exception as e:
-        print(e)
+        print(e, "seller phone")
+        phone = "Не указано"
     return phone
 
 
@@ -163,8 +175,28 @@ def get_apartment_params(soup):
         else:
             block_type = "Вторичка"
     except Exception as e:
-        print(e)
+        print(e, "apartment params")
     return block_type, total_area, total_floors, material
+
+
+def get_cottage_params(soup):
+    total_area, material = ["Не указано"] * 2
+    try:
+        ###
+        # из-за кривой структуры сайта, формируем все сами в удобный формат
+        params_raw = str(soup.find("td", class_="tddec")).split("<br/>")
+        params = BeautifulSoup(params_raw[0], "lxml").find("td", class_="tddec").text.strip().split("\xa0")
+        for param in params_raw[1:]:
+            params.append(BeautifulSoup(param, "lxml").text.strip())
+        ###
+        for param in params:
+            if "Площадь общая" in param:
+                total_area = param.split(":")[1].split("м²")[0].strip() + " м2"
+            elif "cтроение" in param:
+                material = param.split(":")[1].strip()
+    except Exception as e:
+        print(e, "cottage params")
+    return total_area, material
 
 
 def write_csv(data, category):
@@ -201,13 +233,36 @@ def get_apartment_data(html, url):
     phone = get_seller_phone(url, soup)
     date = get_date(soup)
 
-    return [address, rent_info, price, block_type, rooms_number, total_area, total_floors, material, selling_type,
+    return [address, rent_info, block_type, rooms_number, price, total_area, total_floors, material, selling_type,
+            images, description, phone, date]
+
+
+def get_cottage_data(html, url):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    address = "".join(title.split(",")[1:]).strip()
+    address = address[:address.rfind(" на карте")]
+    cottage_type = title.split(",")[0]
+    if "сдам" in cottage_type.lower():
+        cottage_type = " ".join(cottage_type.split()[1:])
+    price = get_price(soup)
+    total_area, material = get_cottage_params(soup)
+    selling_type, rent_info = get_selling_type(soup)  # чистая продажа/ипотека/без посредников; если аренда, срок аренды
+    if not selling_type:
+        selling_type = "Не продажа"
+    images = get_photos(soup)
+    description = get_description(soup)
+    phone = get_seller_phone(url, soup)
+    date = get_date(soup)
+
+    return [address, rent_info, cottage_type, price, total_area, selling_type, material,
             images, description, phone, date]
 
 
 def crawl_page(html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
-    offers = soup.find_all("a", class_="site3adv")
+    offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
     for offer in offers:
         try:
             url = "http://kvadrat64.ru/" + offer.get("href")
@@ -216,8 +271,8 @@ def crawl_page(html, category, sell_type):
                 data = get_apartment_data(get_html(url), url)
             # elif category == "commercials":
             #     data = get_commercial_data(get_html(url))
-            # elif category == "cottages":
-            #     data = get_cottage_data(get_html(url))
+            elif category == "cottages":
+                data = get_cottage_data(get_html(url), url)
 
             if sell_type == "Аренда":
                 data.insert(1, sell_type + "; " + data[1])  # прибавляем срок аренды
@@ -254,7 +309,12 @@ def parse(category_url, category_name, sell_type):
     #     crawl_page(get_html(url_gen))
 
     for page in range(1, 2):
-        url_gen = category_url[:category_url.rfind("-") + 1] + str(page) + ".html"
+        if category_name == "cottages" and sell_type == "Продажа":
+            url = category_url.split("-")
+            url_gen = "-".join(url[:2]) + "-" + str(page) + "-" + url[3]
+        else:
+            url_gen = category_url[:category_url.rfind("-") + 1] + str(page) + ".html"
+
         crawl_page(get_html(url_gen), category_name, sell_type)
 
 
@@ -264,12 +324,22 @@ def main():
         writer.writerow(["Адрес", "Тип сделки", "Тип дома", "Количество комнат", "Цена",
                          "Общая площадь", "Количество этажей", "Материал стен", "Тип продажи"
                          "Фотографии", "Описание", "Номер телефона", "Дата"])
+    with open("kvadrat_cottages.csv", "w") as csv_file:
+        writer = csv.writer(csv_file, delimiter=";")
+        writer.writerow(["Адрес", "Тип сделки", "Тип дома", "Цена", "Общая площадь", "Тип продажи",
+                         "Материал", "Фотографии", "Описание", "Дата", "Номер телефона"])
 
     url_apartments_sell = "http://kvadrat64.ru/sellflatbank-50-1.html"
     parse(url_apartments_sell, "apartments", "Продажа")
 
     url_apartments_rent = "https://kvadrat64.ru/giveflatbank-50-1.html"
     parse(url_apartments_rent, "apartments", "Аренда")
+
+    url_cottages_sell = "https://kvadrat64.ru/search-103-1-50664.html"
+    parse(url_cottages_sell, "cottages", "Продажа")
+
+    url_cottages_rent = "https://kvadrat64.ru/giveflatbank-9-1.html"
+    parse(url_cottages_rent, "cottages", "Аренда")
 
 
 if __name__ == "__main__":
