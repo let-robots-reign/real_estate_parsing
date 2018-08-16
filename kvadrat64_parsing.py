@@ -4,8 +4,10 @@ import csv
 import time
 import random
 from fake_useragent import UserAgent
-import os
 import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import os
 
 
 def transform_date(date_str):
@@ -108,6 +110,25 @@ def get_date(soup):
     return date
 
 
+def get_seller_phone(url):
+    phone = "Не указано"
+    # телефон появляется динамически, используем selenium
+    try:
+        driver = webdriver.Chrome(executable_path=chrome_driver)
+
+        driver.get(url)
+        button = driver.find_element_by_xpath('//span[@class="showphone"]')
+        button.click()
+        time.sleep(3)
+        seller_info = driver.find_elements_by_xpath('//td[@class="tddec2"]')[-1].text
+        for info in seller_info.split("\n"):
+            if "Контактный телефон" in info:
+                phone = info.split(":")[1].strip()
+    except:
+        pass
+    return phone
+
+
 def get_apartment_params(soup):
     block_type, total_area, total_floors, material = ["Не указано"] * 4
     try:
@@ -155,7 +176,7 @@ def write_csv(data, category):
             writer.writerow(data)
 
 
-def get_apartment_data(html):
+def get_apartment_data(html, url):
     soup = BeautifulSoup(html, "lxml")
 
     title = get_title(soup)
@@ -166,11 +187,11 @@ def get_apartment_data(html):
     selling_type = get_selling_type(soup)  # чистая продажа/ипотека/без посредников
     images = get_photos(soup)
     description = get_description(soup)
-    #phone = get_seller_phone(soup)
+    phone = get_seller_phone(url)
     date = get_date(soup)
 
     return [address, price, block_type, rooms_number, total_area, total_floors, material, selling_type,
-            images, description, date]
+            images, description, phone, date]
 
 
 def crawl_page(html, category, sell_type):
@@ -181,7 +202,7 @@ def crawl_page(html, category, sell_type):
             url = "http://kvadrat64.ru/" + offer.get("href")
             data = []
             if category == "apartments":
-                data = get_apartment_data(get_html(url))
+                data = get_apartment_data(get_html(url), url)
             # elif category == "commercials":
             #     data = get_commercial_data(get_html(url))
             # elif category == "cottages":
@@ -234,4 +255,12 @@ def main():
 
 
 if __name__ == "__main__":
+    # defining chrome options for selenium
+    options = Options()
+    options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
+    options.add_argument('--disable-gpu')
+    options.add_argument('--headless')
+
+    chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
     main()
