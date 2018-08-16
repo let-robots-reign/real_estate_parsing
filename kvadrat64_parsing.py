@@ -6,7 +6,35 @@ import random
 from fake_useragent import UserAgent
 import os
 import datetime
-import base64
+
+
+def transform_date(date_str):
+    """
+    Преобразуем дату, чтобы сравнить datetime-объекты
+    """
+    day, month, year = date_str.split("-")
+    if day[0] == "0":
+        day = day[1]
+    if month[0] == "0":
+        month = month[1]
+
+    months = {
+        "1": "Jan",
+        "2": "Feb",
+        "3": "Mar",
+        "4": "Apr",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "Aug",
+        "9": "Sept",
+        "10": "Oct",
+        "11": "Nov",
+        "12": "Dec"
+    }
+
+    date = datetime.datetime.strptime("{} {} {}".format(months[month], day, year), "%B %d %Y")
+    return date
 
 
 def get_html(url):
@@ -44,6 +72,40 @@ def get_selling_type(soup):
     except:
         selling_type = "Не указано"
     return selling_type
+
+
+def get_photos(soup):
+    try:
+        images = []
+        # список ссылок на картинки в полном размере
+        td_images = soup.find("td", class_="tdimg").find_all("a")
+        for image_item in td_images:
+            link = "https://kvadrat64.ru/" + image_item.get("href")
+            html_gallery = BeautifulSoup(get_html(link), "lxml")
+            image = html_gallery.find("img", {"style": "cursor:pointer;"})
+            if image is not None:
+                images.append("https://kvadrat64.ru/" + image.get("src"))
+        images = "\n".join(images)
+    except:
+        images = "Не указано"
+    return images
+
+
+def get_description(soup):
+    try:
+        description = soup.find("p", class_="dinfo").text.strip().replace("\r", "")
+    except:
+        description = "Не указано"
+    return description
+
+
+def get_date(soup):
+    try:
+        date = soup.find("div", class_="tdate").text.strip().split(",")[1].split("VIP")[0].split("создано")[1].strip()
+        date = transform_date(date)
+    except:
+        date = "Не указано"
+    return date
 
 
 def get_apartment_params(soup):
@@ -102,12 +164,13 @@ def get_apartment_data(html):
     block_type, total_area, total_floors, material = get_apartment_params(soup)
     price = get_price(soup)
     selling_type = get_selling_type(soup)  # чистая продажа/ипотека/без посредников
-    # images = get_photos(soup)
-    # description = get_description(soup)
-    # phone = get_seller_phone(soup)
-    # date = get_date(soup)
+    images = get_photos(soup)
+    description = get_description(soup)
+    #phone = get_seller_phone(soup)
+    date = get_date(soup)
 
-    return [address, price, selling_type, block_type, rooms_number, total_area, total_floors, material]
+    return [address, price, block_type, rooms_number, total_area, total_floors, material, selling_type,
+            images, description, date]
 
 
 def crawl_page(html, category, sell_type):
@@ -125,6 +188,16 @@ def crawl_page(html, category, sell_type):
             #     data = get_cottage_data(get_html(url))
 
             data.insert(1, sell_type)
+
+            # if data[-1] < datetime.datetime.today():
+            #     # сраниваем форматы datetime, чтобы знать, когда закончить
+            #     print("Парсинг завершен")
+            #     break
+            # else:
+            #     # переводим в строковый формат
+            #     data[-1] = str(data[-1])
+
+            data[-1] = str(data[-1]).split()[0]
             print(data)
 
             write_csv(data, category)
