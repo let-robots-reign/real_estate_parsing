@@ -99,6 +99,9 @@ def get_photos(soup):
             if image is not None:
                 images.append("https://kvadrat64.ru/" + image.get("src"))
         images = "\n".join(images)
+        # если нет картинок в галерее, пытаемся вытащить с облоджки
+        if not images:
+            images = "https://kvadrat64.ru/" + soup.find("div", id="mainfotoid").find("img").get("src")
     except:
         images = "Не указано"
     return images
@@ -226,24 +229,48 @@ def get_commercial_params(soup):
         for param in params:
             if "Объект" in param:
                 object_type = param.split(":")[1].strip()
+                break
     except Exception as e:
         print(e, "cottage params")
     return object_type
 
 
-def write_csv(data, category):
-    if category == "apartments":
-        with open("kvadrat_apartments.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "cottages":
-        with open("kvadrat_cottages.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "commercials":
-        with open("kvadrat_commercials.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
+def get_dacha_params(soup):
+    total_area = "Не указано"
+    try:
+        ###
+        # из-за кривой структуры сайта, формируем все сами в удобный формат
+        params_raw = str(soup.find("td", class_="tddec")).split("<br/>")
+        params = BeautifulSoup(params_raw[0], "lxml").find("td", class_="tddec").text.strip().split("\xa0")
+        for param in params_raw[1:]:
+            params.append(BeautifulSoup(param, "lxml").text.strip())
+        ###
+        for param in params:
+            if "Площадь дома" in param:
+                total_area = param.split(":")[1].strip()
+                break
+    except Exception as e:
+        print(e, "dacha params")
+    return total_area
+
+
+def get_land_params(soup):
+    total_area = "Не указано"
+    try:
+        ###
+        # из-за кривой структуры сайта, формируем все сами в удобный формат
+        params_raw = str(soup.find("td", class_="tddec")).split("<br/>")
+        params = BeautifulSoup(params_raw[0], "lxml").find("td", class_="tddec").text.strip().split("\xa0")
+        for param in params_raw[1:]:
+            params.append(BeautifulSoup(param, "lxml").text.strip())
+        ###
+        for param in params:
+            if "Площадь участка" in param:
+                total_area = param.split(":")[1].strip()
+                break
+    except Exception as e:
+        print(e, "land params")
+    return total_area
 
 
 def get_apartment_data(html, url):
@@ -314,6 +341,62 @@ def get_commercial_data(html, url):
     return None
 
 
+def get_dacha_data(html, url):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    if "сниму" not in title.lower():
+        address = "".join(title.split(",")[1:]).strip()
+        address = address[:address.rfind("(")]
+        distance = title[title.rfind("(") + 1:title.rfind(")")]
+        total_area = get_dacha_params(soup)
+        price = get_price(soup)
+        images = get_photos(soup)
+        description = get_description(soup)
+        phone = get_seller_phone(url, soup)
+        date = get_date(soup)
+
+        return [address, distance, total_area, price, images, description, phone, date]
+    return None
+
+
+def get_lands_saratov_data(html, url):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    if "сниму" not in title.lower():
+        address = ",".join(title.split(",")[1:]).strip()
+        address = address[:address.rfind("(")].strip()
+        total_area = get_land_params(soup)
+        price = get_price(soup)
+        images = get_photos(soup)
+        description = get_description(soup)
+        phone = get_seller_phone(url, soup)
+        date = get_date(soup)
+
+        return [address, total_area, price, images, description, phone, date]
+    return None
+
+
+def get_lands_region_data(html, url):
+    soup = BeautifulSoup(html, "lxml")
+
+    title = get_title(soup)
+    if "сниму" not in title.lower():
+        address = "".join(title.split(",")[1:])
+        address = address[:address.find("(")].strip()
+        distance = title[title.find("(") + 1:title.find(")")]
+        total_area = get_land_params(soup)
+        price = get_price(soup)
+        images = get_photos(soup)
+        description = get_description(soup)
+        phone = get_seller_phone(url, soup)
+        date = get_date(soup)
+
+        return [address, distance, total_area, price, images, description, phone, date]
+    return None
+
+
 def crawl_page(html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
@@ -327,6 +410,12 @@ def crawl_page(html, category, sell_type):
                 data = get_commercial_data(get_html(url), url)
             elif category == "cottages":
                 data = get_cottage_data(get_html(url), url)
+            elif category == "dachas":
+                data = get_dacha_data(get_html(url), url)
+            elif category == "lands_saratov":
+                data = get_lands_saratov_data(get_html(url), url)
+            elif category == "lands_region":
+                data = get_lands_region_data(get_html(url), url)
 
             if category == "apartments" or category == "cottages":
                 if sell_type == "Аренда":
@@ -346,8 +435,6 @@ def crawl_page(html, category, sell_type):
             data[-1] = str(data[-1]).split()[0]  # форматируем дату после проверки
             print(data)
 
-            write_csv(data, category)
-
             time.sleep(random.uniform(5, 8))
         except Exception as e:
             print(e, "crawl_page")
@@ -364,7 +451,8 @@ def parse(category_url, category_name, sell_type):
     #     crawl_page(get_html(url_gen))
 
     for page in range(1, 2):
-        if category_name == "cottages" and sell_type == "Продажа":
+        if (category_name == "cottages" and sell_type == "Продажа") or category_name == "lands_saratov" \
+                or category_name == "lands_region":
             url = category_url.split("-")
             url_gen = "-".join(url[:2]) + "-" + str(page) + "-" + url[3]
         else:
@@ -391,6 +479,15 @@ def main():
 
     url_commercials_rent = "https://kvadrat64.ru/givecombank-1000-1.html"
     parse(url_commercials_rent, "commercials", "Аренда")
+
+    url_dachas_sell = "https://kvadrat64.ru/sellzagbank-1000-1.html"
+    parse(url_dachas_sell, "dachas", "Продажа")
+
+    url_saratov_lands_sell = "https://kvadrat64.ru/search-41-1-24435.html"
+    parse(url_saratov_lands_sell, "lands_saratov", "Продажа")
+
+    url_region_lands_sell = "https://kvadrat64.ru/search-412-1-24450.html"
+    parse(url_region_lands_sell, "lands_region", "Продажа")
 
 
 if __name__ == "__main__":
