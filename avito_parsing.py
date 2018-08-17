@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-import csv
 import time
 import random
 from fake_useragent import UserAgent
@@ -237,25 +236,6 @@ def get_commercial_params(soup):
     return office_class, area
 
 
-def write_csv(data, category):
-    if category == "apartments":
-        with open("avito_apartments.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "cottages":
-        with open("avito_cottages.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "lands":
-        with open("avito_lands.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "commercials":
-        with open("avito_commercials.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-
-
 def get_apartment_data(url, html):
     soup = BeautifulSoup(html, "lxml")
 
@@ -395,9 +375,6 @@ def crawl_page(html, category):
 
             print(data)
 
-            if data is not None:
-                write_csv(data, category)
-
             time.sleep(random.uniform(5, 8))
         except Exception as e:
             print("Ошибка в crawl_page")
@@ -423,28 +400,6 @@ def parse(category_url, base_url, category_name):
 
 
 def main():
-    with open("avito_apartments.csv", "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Тип дома", "Количество комнат", "Этаж", "Этажей в доме",
-                        "Общая площадь", "Площадь кухни", "Жилая площадь", "Цена", "Право собственности",
-                        "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
-
-    with open("avito_cottages.csv", "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Материал стен", "Этажей в доме", "Площадь дома", "Площадь участка",
-                         "Цена", "Расстояние до города", "Право собственности", "Фотографии", "Описание", "Имя продавца",
-                         "Номер телефона"])
-
-    with open("avito_lands.csv", "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Залог", "Категория земель", "Расстояние до города", "Площадь участка", "Цена",
-                         "Право собственности", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
-
-    with open("avito_commercials.csv", "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Залог", "Вид объекта", "Класс здания", "Площадь", "Цена",
-                         "Право собственности", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
-
     url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
     parse(url_apartments, base_url, "apartments")

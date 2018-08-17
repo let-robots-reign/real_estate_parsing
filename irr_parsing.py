@@ -1,10 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
-import csv
 import time
 import random
 from fake_useragent import UserAgent
-import os
 import datetime
 import base64
 
@@ -116,21 +114,6 @@ def get_seller_phone(soup):
     except:
         ciphered_phone = "Не указано"
     return base64.b64decode(ciphered_phone).decode("utf-8")
-
-
-def write_csv(data, category):
-    if category == "apartments":
-        with open("irr_apartments.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "cottages":
-        with open("irr_cottages.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
-    elif category == "commercials":
-        with open("irr_commercials.csv", "a") as csv_file:
-            writer = csv.writer(csv_file, delimiter=";")
-            writer.writerow(data)
 
 
 def get_apartment_params(soup):
@@ -315,8 +298,6 @@ def crawl_page(html, category, sell_type):
             data.insert(1, sell_type)
             print(data)
 
-            write_csv(data, category)
-
             time.sleep(random.uniform(5, 8))
         except Exception as e:
             print(e)
@@ -340,23 +321,6 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
-    with open("irr_apartments.csv", "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Материал стен", "Количество комнат", "Этаж",
-                         "Общая площадь", "Площадь кухни", "Жилая площадь", "Отделка", "Цена",
-                         "Тип объявления", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
-
-    with open("irr_commercials.csv", "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Тип недвижимости", "Тип здания", "Парковка", "Высота потолков",
-                         "Площадь", "Цена", "Право собственности", "Фотографии", "Описание", "Имя продавца", "Номер телефона"])
-
-    with open("irr_cottages.csv", "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=";")
-        writer.writerow(["Адрес", "Тип сделки", "Тип объекта", "Цена", "Общая площадь", "Материал стен",
-                         "Количество этажей", "Площадь участка", "Статус участка", "Удобства", "Фотографии",
-                         "Описание", "Дата", "Имя продавца", "Номер телефона"])
-
     # на сайте есть разделения продажа/аренда
     # сначала парсим страницу с предложениями продажи
     url_apartments_sell = "https://saratovskaya-obl.irr.ru/real-estate/apartments-sale/sort/date_sort:desc/"
@@ -401,7 +365,5 @@ if __name__ == "__main__":
         "12": "декабря"
     }
     break_point = yesterday[2] + " " + months[yesterday[1]]
-
-    chrome_driver = os.getcwd() + "\\chromedriver.exe"
 
     main()
