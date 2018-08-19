@@ -14,13 +14,12 @@ def get_html(url):
                                      "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
                                      "Connection": "keep-alive", "Origin": "https://realty.yandex.ru",
                                      "DNT": "1"})
-    print(req.headers)
     return req.text.encode(req.encoding)
 
 
 def get_title(soup):
     try:
-        title = soup.find("h1", class_="offer-card__header-text").text.strip()
+        title = soup.find("div", class_="card__info").text.strip()
     except:
         title = "Не указано"
     return title
@@ -28,7 +27,7 @@ def get_title(soup):
 
 def get_address(soup):
     try:
-        address = soup.find("h2", class_="offer-card__address ellipsis").text.strip()
+        address = soup.find("div", class_="address__text").text.strip()
     except Exception as e:
         print(str(e) + " address")
         address = "Не указано"
@@ -37,11 +36,13 @@ def get_address(soup):
 
 def get_block_type(soup):
     try:
-        block_type = soup.find("div", class_="offer-card__building-type")
-        if block_type is None:
-            block_type = "Вторичка"
-        else:
-            block_type = block_type.text.strip()
+        specs_headers = soup.find_all("th", class_="specs__header-cell")
+        block_type = "Вторичка"
+        for spec in specs_headers:
+            spec = spec.find("div").text.strip()
+            if spec is not None:
+                if "ЖК" in spec:
+                    block_type = "Новостройка"
     except Exception as e:
         print(e, " block_type")
         block_type = "Не указано"
@@ -50,7 +51,7 @@ def get_block_type(soup):
 
 def get_price(soup):
     try:
-        price = soup.find("h3", class_="offer-price offer-card__price offer-card__price").get("title")
+        price = soup.find("h2", class_="card__name").text.strip()
     except Exception as e:
         print(str(e) + " price")
         price = "Не указано"
@@ -59,7 +60,7 @@ def get_price(soup):
 
 def get_selling_type(soup):
     try:
-        selling_type = soup.find("div", class_="offer-card__terms").text.strip()
+        selling_type = soup.find("div", class_="card__terms").text.strip()
     except Exception as e:
         print(str(e) + " selling_type")
         selling_type = "Не указано"
@@ -68,7 +69,7 @@ def get_selling_type(soup):
 
 def get_seller_type(soup):
     try:
-        seller_type = soup.find("div", class_="offer-card__author-note").text.strip()
+        seller_type = soup.find("div", class_="card__author-category").text.strip()
     except Exception as e:
         print(str(e) + " seller_type")
         seller_type = "Не указано"
@@ -78,9 +79,9 @@ def get_seller_type(soup):
 def get_photos(soup):
     try:
         images = []
-        images_list = soup.find("div", class_="offer-card__photos-wrapper").find_all("a", class_="offer-card__react-gallery-photo")
+        images_list = soup.find_all("div", class_="card__image-wrapper")
         for image in images_list:
-            link = "https://realty.yandex.ru" + image.get("href")
+            link = image.find("div", class_="image").get("src")
             images.append(link)
         images = "\n".join(images)
     except Exception as e:
@@ -91,7 +92,7 @@ def get_photos(soup):
 
 def get_description(soup):
     try:
-        description = soup.find("div", class_="offer-card__desc-text").text.strip()
+        description = soup.find("div", class_="shorter__full").text.strip()
     except Exception as e:
         print(str(e) + " description")
         description = "Не указано"
@@ -100,7 +101,7 @@ def get_description(soup):
 
 def get_date(soup):
     try:
-        date = soup.find("div", class_="OffersSerpItem__publish-date").text.strip()
+        date = soup.find("div", class_="card__date").text.strip()
         if "назад" in date:
             time_passed = int(date.split()[0])
             if "минут" in date:
@@ -116,10 +117,9 @@ def get_date(soup):
 def get_seller_phone(soup):
     phone = "Не указано"
     try:
-        phone_div = soup.find("div", class_="offer-card__contacts-new-phones").find("div").get("data-bem")
-        print(phone_div)
+        phone = soup.find("div", class_="phone__wrapper")
     except Exception as e:
-        print(e)
+        print(str(e) + " phone")
     return phone
 
 
@@ -209,15 +209,16 @@ def get_apartment_data(html, url):
     address = get_address(soup)
     block_type = get_block_type(soup)
     price = get_price(soup)
-    rooms_number, total_floors, total_area, material, year = get_apartment_params(soup)
+    #rooms_number, total_floors, total_area, material, year = get_apartment_params(soup)
     selling_type = get_selling_type(soup)
     seller_type = get_seller_type(soup)
     images = get_photos(soup)
     description = get_description(soup)
-    phone = get_seller_phone(soup)
+    #phone = get_seller_phone(soup)
 
-    return [address, block_type, rooms_number, price, total_area, total_floors, material,
-            year, selling_type, images, description, seller_type, phone]
+    return [address, block_type, price, selling_type, seller_type, images, description, phone]
+    #return [address, block_type, rooms_number, price, total_area, total_floors, material,
+     #       year, selling_type, images, description, seller_type, phone]
 
 
 def get_cottage_data(html):
@@ -251,21 +252,12 @@ def get_commercial_data(html):
 
 def crawl_page(html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
-    # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
-    no_records = soup.find("div", class_="OffersSerpNotFound")
-    if no_records is not None:
-        print("Страницы закончились")
-        return
 
-    offers = soup.find("ol", class_="OffersSerp__list").find_all("li", class_="OffersSerp__list-item_type_offer")
-    k = 0
+    offers = [x.find("a", class_="link") for x in soup.find_all("div", class_="serp-item__media-wrapper")]
     for offer in offers:
         try:
             # TODO: проверить еще на дубликат
-            if offer.find("div", class_="OffersSerpItem__publish-date").text.strip() == break_point:
-                print("Парсинг завершен")
-                return
-            url = "https://realty.yandex.ru" + offer.find("a", class_="OffersSerpItem__link").get("href")
+            url = "https://m.realty.yandex.ru" + offer.get("href")
 
             data = []
             if category == "apartments":
@@ -285,11 +277,7 @@ def crawl_page(html, category, sell_type):
             print(e)
             print("Ошибка в crawl_page")
 
-        k += 1
-        if k % 5 == 0:  # после каждого пятого запроса, делаем паузу побольше
-            time.sleep(120)
-        else:
-            time.sleep(random.uniform(15, 20))
+        time.sleep(random.uniform(15, 20))
 
 
 def parse(category_url, category_name, sell_type):
@@ -304,23 +292,23 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
-    url_apartments_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/kvartira/?sort=DATE_DESC&page=0"
+    url_apartments_sell = "https://m.realty.yandex.ru/saratovskaya_oblast/kupit/kvartira/?sort=DATE_DESC&page=0"
     parse(url_apartments_sell, "apartments", "Продажа")
 
-    url_apartments_rent = "https://realty.yandex.ru/saratovskaya_oblast/snyat/kvartira/?sort=DATE_DESC&page=0"
-    parse(url_apartments_rent, "apartments", "Аренда")
-
-    url_cottages_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/dom/?sort=DATE_DESC&page=0"
-    parse(url_cottages_sell, "cottages", "Продажа")
-
-    url_cottages_rent = "https://realty.yandex.ru/saratovskaya_oblast/snyat/dom/?sort=DATE_DESC&page=0"
-    parse(url_cottages_rent, "cottages", "Аренда")
-
-    url_commercials_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/kommercheskaya-nedvizhimost/?sort=DATE_DESC&page=0"
-    parse(url_commercials_sell, "commercials", "Продажа")
-
-    url_commercials_rent = "https://realty.yandex.ru/saratovskaya_oblast/snyat/kommercheskaya-nedvizhimost/?sort=DATE_DESC&page=0"
-    parse(url_commercials_rent, "commercials", "Аренда")
+    # url_apartments_rent = "https://realty.yandex.ru/saratovskaya_oblast/snyat/kvartira/?sort=DATE_DESC&page=0"
+    # parse(url_apartments_rent, "apartments", "Аренда")
+    #
+    # url_cottages_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/dom/?sort=DATE_DESC&page=0"
+    # parse(url_cottages_sell, "cottages", "Продажа")
+    #
+    # url_cottages_rent = "https://realty.yandex.ru/saratovskaya_oblast/snyat/dom/?sort=DATE_DESC&page=0"
+    # parse(url_cottages_rent, "cottages", "Аренда")
+    #
+    # url_commercials_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/kommercheskaya-nedvizhimost/?sort=DATE_DESC&page=0"
+    # parse(url_commercials_sell, "commercials", "Продажа")
+    #
+    # url_commercials_rent = "https://realty.yandex.ru/saratovskaya_oblast/snyat/kommercheskaya-nedvizhimost/?sort=DATE_DESC&page=0"
+    # parse(url_commercials_rent, "commercials", "Аренда")
 
 
 if __name__ == "__main__":
