@@ -14,17 +14,40 @@ def get_html(url):
     return req.text.encode(req.encoding)
 
 
+def get_date(html, k):
+    soup = BeautifulSoup(html, "lxml")
+
+    try:
+        date = soup.find_all("span", class_="hidden-xs")[k].text.strip()
+        if "сегодня" in date:
+            return str(datetime.datetime.today()).split()[0]
+        elif "вчера" in date:
+            return str(datetime.datetime.today() - datetime.timedelta(days=1)).split()[0]
+        else:
+            return "too old"
+    except Exception as e:
+        date = "Не указано"
+        print(str(e) + " date")
+    return date
+
+
 def get_category(html, k):
     soup = BeautifulSoup(html, "lxml")
 
     try:
         title = soup.find_all("div", class_="product_item__title")[k].text.split(",")[0].strip()
-        if title == "Квартира":
-            return "apartment"
-        elif any(x in title for x in ["Дом", "Коттедж", "Таунхаус", "Дача"]):
-            return "cottage"
-        elif title == "Участок":
-            return "land"
+        if "Квартира" in title:
+            return "Квартира"
+        elif "Дом" in title:
+            return "Дом"
+        elif "Коттедж" in title:
+            return "Коттедж"
+        elif "Таунхаус" in title:
+            return "Таунхаус"
+        elif "Дача" in title:
+            return "Дача"
+        elif "Участок" in title:
+            return "Участок"
     except Exception as e:
         print(str(e) + " category")
     return None
@@ -43,7 +66,9 @@ def get_selling_type(url):
     if "prodaja" in url:
         return "Продажа"
     elif "arenda" in url:
-        return "Аренда"
+        if "posutochno" in url:
+            return "Аренда (посуточно)"
+        return "Аренда (длительный срок)"
     return "Не указано"
 
 
@@ -73,9 +98,7 @@ def get_photos(driver):
         images = "\n".join([x.get_attribute("src") for x in driver.find_elements_by_tag_name("div")
                             if x.get_attribute("src") is not None])
         if not images:
-            images = "\n".join([x.get_attribute("src") for x in
-                                driver.find_element_by_css_selector("div[data-test-component='ProductGallery']")
-                                .find_element_by_tag_name("img")])
+            images = driver.find_element_by_css_selector("div[data-test-component='ProductGallery']").find_element_by_tag_name("img").get_attribute("src")
     except Exception as e:
         images = "Не указано"
         print(str(e) + " images")
@@ -134,6 +157,36 @@ def get_apartment_params(driver):
     return material, lift, year, rooms_number, floor, total_floors, total_area, kitchen_area, repair
 
 
+def get_cottage_params(driver):
+    total_area, material, total_floors, bedrooms, land_area, status, comforts = ["Не указано"] * 7
+    try:
+        expand = driver.find_element_by_tag_name("table").find_elements_by_tag_name("tbody")[2].find_element_by_tag_name("div")
+        expand.click()
+        params = driver.find_element_by_tag_name("table").find_elements_by_tag_name("tbody")[2].find_elements_by_tag_name("th")
+        values = driver.find_element_by_tag_name("table").find_elements_by_tag_name("tbody")[2].find_elements_by_tag_name("td")
+        for i in range(len(params)):
+            if "Площадь дома" in params[i].text.strip():
+                total_area = values[i].text.strip()
+            elif "Материал дома" in params[i].text.strip():
+                material = values[i].text.strip()
+            elif "Количество спален" in params[i].text.strip():
+                bedrooms = values[i].text.strip()
+            elif "Площадь участка" in params[i].text.strip():
+                land_area = values[i].text.strip()
+            elif "Этажей" in params[i].text.strip():
+                total_floors = values[i].text.strip()
+            elif "Тип участка" in params[i].text.strip():
+                status = values[i].text.strip()
+            elif any(x in params[i].text.strip() for x in ["Электричество", "Газ", "Водоснабжение", "Отопление", "Гараж", "Санузлы"]):
+                if comforts == "Не указано":
+                    comforts = params[i].text.strip() + " - " + values[i].text.strip().lower() + "; "
+                else:
+                    comforts += params[i].text.strip() + " - " + values[i].text.strip().lower() + "; "
+    except Exception as e:
+        print(str(e) + " cottage params")
+    return total_area, material, total_floors, bedrooms, land_area, status, comforts
+
+
 def get_apartment_data(url):
     driver = webdriver.Chrome(executable_path=chrome_driver)
     driver.set_window_size(1920, 1080)
@@ -143,6 +196,11 @@ def get_apartment_data(url):
     selling_type = get_selling_type(url)
     material, lift, year, rooms_number, floor, total_floors, total_area, kitchen_area, repair = get_apartment_params(driver)
     price = get_price(driver)
+    if "Аренда" in selling_type:
+        if "posutochno" in url:
+            price += "/день"
+        else:
+            price += "/мес."
     seller_type, seller_name = get_seller_info(driver)
     images = get_photos(driver)
     description = get_description(driver)
@@ -154,33 +212,59 @@ def get_apartment_data(url):
             kitchen_area, repair, price, seller_type, images, description, seller_name, phone]
 
 
+def get_cottage_data(url, category):
+    driver = webdriver.Chrome(executable_path=chrome_driver)
+    driver.set_window_size(1920, 1080)
+    driver.get(url)
+
+    address = get_address(driver)
+    selling_type = get_selling_type(url)
+    price = get_price(driver)
+    if "Аренда" in selling_type:
+        if "posutochno" in url:
+            price += "/день"
+        else:
+            price += "/мес."
+    total_area, material, total_floors, bedrooms, land_area, status, comforts = get_cottage_params(driver)
+    images = get_photos(driver)
+    description = get_description(driver)
+    phone = get_seller_phone(driver)
+
+    if category == "Участок":
+        material, total_floors = "Участок", "Участок"
+
+    return [address, selling_type, category, price, total_area, material, total_floors, bedrooms,
+            land_area, status, comforts, images, description, phone]
+
+
 def crawl_page(html):
     soup = BeautifulSoup(html, "lxml")
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
     offers = soup.find_all("li", class_="product_item")
+    if offers is None:
+        return True
     k = 0
     for offer in offers:
         try:
             category = get_category(html, k)
+            date = get_date(html, k)
+            if date == "too old" and len(offer.get("class")) == 1:
+                return True
             k += 1
-            print(category)
             # TODO: проверить на дубликат
             # TODO: проверить, существует ли страница
             url = "https://youla.ru" + offer.find("a").get("href")
             print(url)
-            if category is None:
+            if category is None or "saratov" not in url:
+                time.sleep(random.uniform(5, 8))
                 continue
             data = []
-            if category == "apartment":
+            if category == "Квартира":
                 data = get_apartment_data(url)
-            # elif category == "cottage":
-            #     data = get_cottage_data(get_html(url), url)
-            # elif category == "land":
-            #     data = get_land_data(get_html(url), url)
+            elif any(x in category for x in ["Дом", "Коттедж", "Таунхаус", "Дача", "Участок"]):
+                data = get_cottage_data(url, category)
 
-            # if data[-2] == "too old":
-            #     return True
-
+            data.append(date)
             print(*data, sep="\n")
             print("--------------------------------------")
 
