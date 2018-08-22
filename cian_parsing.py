@@ -29,7 +29,8 @@ def get_address(soup):
         if "На карте" in address:
             address = address[:address.rfind("На карте")]
     except Exception as e:
-        print(str(e) + " address")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_title\n")
         address = "Не указано"
     return address
 
@@ -43,7 +44,8 @@ def get_price(soup):
             price = "от " + soup.find("span", {"itemprop": "lowPrice"}).text.strip() + \
                     " до " + soup.find("span", {"itemprop": "highPrice"}).text.strip() + "/мес."
     except Exception as e:
-        print(str(e) + " price")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_price\n")
         price = "Не указано"
     return price
 
@@ -57,7 +59,8 @@ def get_selling_type(soup):
         else:
             selling_type = "Не указано"
     except Exception as e:
-        print(str(e) + " selling_type")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_selling_type\n")
         selling_type = "Не указано"
     return selling_type
 
@@ -75,7 +78,8 @@ def get_seller_type(soup):
             else:
                 seller_type = "Посредник"
     except Exception as e:
-        print(str(e) + " seller_type")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_seller_type\n")
         seller_type = "Не указано"
     return seller_type
 
@@ -93,7 +97,8 @@ def get_photos(url):
             images.append(link)
         images = "\n".join(images)
     except Exception as e:
-        print(str(e) + " images")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_photos\n")
         images = "Не указано"
     return images
 
@@ -104,7 +109,8 @@ def get_description(soup):
                       and len(x.get("class")) == 1 and x.get("class")[0].startswith("description-text--")]
         description = paragraphs[0].text.strip()
     except Exception as e:
-        print(str(e) + " description")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_description\n")
         description = "Не указано"
     return description
 
@@ -119,7 +125,8 @@ def get_date(soup):
         else:
             date = "too old"
     except Exception as e:
-        print(str(e) + " date")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_date\n")
         date = "Не указано"
     return date
 
@@ -140,7 +147,8 @@ def driver_get_phone_and_images(url):
             # берем с обложки
             images = driver.find_element_by_class_name("fotorama__img").get_attribute("src")
     except Exception as e:
-        print(str(e) + " images")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_images\n")
         images = "Не указано"
 
     try:
@@ -151,7 +159,8 @@ def driver_get_phone_and_images(url):
                            and x.get_attribute("class").startswith("phone--")])
     except Exception as e:
         phone = "Не указано"
-        print(str(e) + " phone")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_phone\n")
     driver.quit()
     return images, phone
 
@@ -193,7 +202,8 @@ def get_apartment_params(soup):
                     year = building_values[i]
                     break
     except Exception as e:
-        print(str(e) + " apartment params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_apartment_params\n")
     return block_type, rooms_number, total_floors, total_area, material, year
 
 
@@ -229,7 +239,8 @@ def get_cottage_params(soup):
             elif material == "Не указано" and "Тип дома" in desc_params[i]:
                 material = desc_values[i]
     except Exception as e:
-        print(str(e) + " cottage params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_cottage_params\n")
     return total_area, material, land_area, status, comforts
 
 
@@ -256,7 +267,8 @@ def get_commercial_params(soup):
             elif "Мебель" in desc_params[i]:
                 furniture = desc_values[i]
     except Exception as e:
-        print(str(e) + " commercials params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " cian get_commercial_params\n")
     return office_class, floor, furniture, entrance
 
 
@@ -273,7 +285,7 @@ def get_apartment_data(html, url):
     date = get_date(soup)
     images, phone = driver_get_phone_and_images(url)
 
-    return [address, block_type, rooms_number, price, total_area, total_floors, material,
+    return [address, price, block_type, rooms_number, total_area, total_floors, material,
             year, selling_type, images, description, seller_type, date, phone]
 
 
@@ -290,7 +302,7 @@ def get_cottage_data(html, url):
     date = get_date(soup)
     images, phone = driver_get_phone_and_images(url)
 
-    return [address, cottage_type, price, total_area, material, land_area, status,
+    return [address, price, cottage_type, total_area, material, land_area, status,
             comforts, selling_type, images, description, date, phone]
 
 
@@ -327,7 +339,7 @@ def get_commercial_data(html, url):
     date = get_date(soup)
     images, phone = driver_get_phone_and_images(url)
 
-    return [address, object_type, price, office_class, floor, furniture, entrance, images,
+    return [address, price, object_type, office_class, floor, furniture, entrance, images,
             description, date, phone]
 
 
@@ -338,19 +350,24 @@ def crawl_page(html, category, sell_type):
               if x.get("class") is not None and "offer-container" in x.get("class")[0]]
     for offer in offers:
         try:
-            # TODO: проверить на дубликат
-            # TODO: проверить, существует ли страница
             url = offer.find("a").get("href")
             print(url)
             data = []
             if category == "apartments":
                 data = get_apartment_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
             elif category == "cottages":
                 data = get_cottage_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[2], data[3], url))
             elif category == "commercials":
                 data = get_commercial_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
 
             if data[-2] == "too old":
+                print("Парсинг завершен")
                 return True
 
             data.insert(1, sell_type)
@@ -358,23 +375,19 @@ def crawl_page(html, category, sell_type):
             print("--------------------------------------")
 
         except Exception as e:
-            print(e)
-            print("Ошибка в crawl_page")
+            with open("logs.txt", "a", encoding="utf8") as file:
+                file.write(str(e) + " cian crawl_page\n")
 
         time.sleep(random.uniform(5, 8))
 
 
 def parse(category_url, category_name, sell_type):
-
-    # for page in range(1, total_pages + 1):
-    #     url_gen = base_url + page_part + str(page) + parameters_part
-    #     crawl_page(get_html(url_gen))
-
-    for page in range(1, 2):
+    completed = False
+    while not completed:
+        page = 1
         url_gen = category_url[:category_url.rfind("=") + 1] + str(page)
         completed = crawl_page(get_html(url_gen), category_name, sell_type)
-        if completed:
-            break
+        page += 1
 
 
 def main():
@@ -398,8 +411,6 @@ def main():
 
 
 if __name__ == "__main__":
-    break_point = ""  # на каких записях скрипт остановился в прошлый раз
-
     # defining chrome options for selenium
     # options = Options()
     # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])

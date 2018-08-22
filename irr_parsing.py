@@ -320,7 +320,7 @@ def crawl_page(first_offer, html, category, sell_type):
             elif category == "cottages":
                 data = get_cottage_data(get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[5], data[3], url))
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[2], data[3], url))
             elif category == "commercials":
                 data = get_commercial_data(get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:

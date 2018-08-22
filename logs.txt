@@ -1,10 +1,1 @@
-'NoneType' object has no attribute 'text' avito get_title
-'NoneType' object has no attribute 'text' avito get_address
-'NoneType' object has no attribute 'text' avito get_selling info
-'NoneType' object has no attribute 'find' avito get_seller_name
-'NoneType' object has no attribute 'get' avito get_photos
-'NoneType' object has no attribute 'find' avito get_description
-'NoneType' object has no attribute 'find' irr get_seller_info
-'NoneType' object has no attribute 'find_all' irr get_photos
-'NoneType' object has no attribute 'find_all' irr get_photos
-'NoneType' object has no attribute 'find_all' irr get_photos
+'NoneType' object has no attribute 'text' ya get_description
