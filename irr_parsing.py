@@ -8,7 +8,8 @@ import base64
 
 
 def get_html(url):
-    return requests.get(url, headers={"User-Agent": UserAgent().chrome}).text
+    req = requests.get(url, headers={"User-Agent": UserAgent().chrome})
+    return req.text.encode(req.encoding)
 
 
 def get_total_pages(html):
@@ -17,14 +18,16 @@ def get_total_pages(html):
     if total_pages is not None:
         total_pages = total_pages.find_all("a", class_="pagination__pagesLink")[-1].text.strip()
     else:
-        total_pages = 0
+        total_pages = 1
     return int(total_pages)
 
 
 def get_title(soup):
     try:
         title = soup.find("h1", class_="productPage__title").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_title\n")
         title = "Не указано"
     return title
 
@@ -32,7 +35,9 @@ def get_title(soup):
 def get_address(soup):
     try:
         address = soup.find("div", class_="productPage__infoTextBold js-scrollToMap").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_address\n")
         address = "Не указано"
     return address
 
@@ -45,7 +50,9 @@ def get_material(soup):
             info = building_params[i].text.strip()
             if "Материал стен" in info:
                 material = info.split(":")[1].strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_material\n")
         material = "Не указано"
     return material
 
@@ -56,7 +63,9 @@ def get_price(soup):
         fee = soup.find("div", class_="productPage__fee")
         if fee is not None:
             price += " (" + fee.text.strip() + ")"
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_price\n")
         price = "Не указано"
     return price
 
@@ -70,7 +79,9 @@ def get_seller_info(soup):
         else:
             seller_type = "Частное лицо"
             seller_name = soup.find("div", class_="productPage__infoTextBold productPage__infoTextBold_inline").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_seller_info\n")
         seller_name, seller_type = "Не указано", "Не указано"
     return seller_type, seller_name
 
@@ -83,7 +94,9 @@ def get_photos(soup):
             link = image.get("content")
             images.append(link)
         images = "\n".join(images)
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_photos\n")
         images = "Не указано"
     return images
 
@@ -91,7 +104,9 @@ def get_photos(soup):
 def get_description(soup):
     try:
         description = " ".join(soup.find("p", class_="productPage__descriptionText js-productPageDescription").text.strip().split())
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_description\n")
         description = "Не указано"
     return description
 
@@ -103,7 +118,9 @@ def get_date(soup):
             date = str(datetime.datetime.today()).split()[0] + relative_date[1]
         else:
             date = str(datetime.datetime.today() - datetime.timedelta(days=2)).split()[0] + relative_date[1]
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_date\n")
         date = "Не указано"
     return date
 
@@ -111,7 +128,9 @@ def get_date(soup):
 def get_seller_phone(soup):
     try:
         ciphered_phone = soup.find("input", {"class": "js-backendVar", "name": "phoneBase64"}).get("value")
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_seller-phone\n")
         ciphered_phone = "Не указано"
     return base64.b64decode(ciphered_phone).decode("utf-8")
 
@@ -141,8 +160,9 @@ def get_apartment_params(soup):
                 if furnish == "1":
                     # иногда выводит "1", хотя на странице не указан
                     furnish = "Не указано"
-    except:
-        pass
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_apartment_params\n")
     return rooms_number, floor, total_area, kitchen_area, living_area, furnish
 
 
@@ -164,8 +184,9 @@ def get_commercial_params(soup):
                 parking = "Парковка есть"
             elif "Высота потолков" in info:
                 ceilings = info.split(":")[1].strip()
-    except:
-        pass
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_commercial_params\n")
     return building_type, parking, ceilings, area
 
 
@@ -194,8 +215,9 @@ def get_cottage_params(soup):
                     comforts = info.strip()
                 else:
                     comforts += "; " + info.strip()
-    except:
-        pass
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_cottage_params\n")
     return house_area, material, total_floors, land_area, status, comforts
 
 
@@ -212,8 +234,8 @@ def get_apartment_data(html):
     description = get_description(soup)
     phone = get_seller_phone(soup)
 
-    return [address, material, rooms_number, floor, total_area, kitchen_area, living_area, furnish,
-            price, seller_type, images, description, seller_name, phone]
+    return [address, price, material, rooms_number, floor, total_area, kitchen_area, living_area, furnish,
+            seller_type, images, description, seller_name, phone]
 
 
 def get_commercial_data(html):
@@ -244,7 +266,7 @@ def get_commercial_data(html):
     description = get_description(soup)
     phone = get_seller_phone(soup)
 
-    return [address, object_type, building_type, parking, ceilings, area, price, seller_type, images,
+    return [address, price, object_type, building_type, parking, ceilings, area, seller_type, images,
             description, seller_name, phone]
 
 
@@ -272,36 +294,65 @@ def get_cottage_data(html):
     description = get_description(soup)
     phone = get_seller_phone(soup)
 
-    return [address, object_type, price, house_area, material, total_floors, land_area, status, comforts,
+    return [address, price, object_type, house_area, material, total_floors, land_area, status, comforts,
             images, description, date, seller_name, phone]
 
 
-def crawl_page(html, category, sell_type):
+def crawl_page(first_offer, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="listing js-productGrid ").find_all("div", class_="listing__item")
     for offer in offers:
         try:
-            # TODO: проверить еще на дубликат
-            if offer.find("span", class_="listing__itemDate").find("div", class_="updateProduct").text.strip() == break_point:
+
+            # if offer.find("span", class_="listing__itemDate").find("div", class_="updateProduct").split()[0] < \
+            #         str(datetime.datetime.today() - datetime.timedelta(days=1)).split()[0].split("-")[-1]:
+            #     print("Парсинг завершен")
+            #     return True
+            date = offer.find("span", class_="listing__itemDate").find("div", class_="updateProduct").text.strip()
+            if date == date_break_point:
                 print("Парсинг завершен")
-                break
+                return True
+
             url = offer.find("div", class_="listing__itemTitleWrapper").find("a", class_="listing__itemTitle").get("href")
+            print(url)
 
             data = []
             if category == "apartments":
                 data = get_apartment_data(get_html(url))
-            elif category == "commercials":
-                data = get_commercial_data(get_html(url))
+                # записываем ключевую информация, чтобы потом найти дубликаты
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s--%s\n" % (data[0], data[3], data[4], data[5], url))
             elif category == "cottages":
                 data = get_cottage_data(get_html(url))
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[5], data[3], url))
+            elif category == "commercials":
+                data = get_commercial_data(get_html(url))
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[2], data[6], url))
+
+            if first_offer:
+                # сохраняем самую первую запись как точку выхода
+                modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
+                with open("breakpoints/irr.txt", modifier, encoding="utf8") as file:
+                    file.write("%s--%s\n" % (data[0], data[1]))
+                first_offer = False
+
+            key_info = (data[0], data[1])
+
+            if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_commercials_sell,
+                                           break_commercial_rent, break_cottage_sell, break_cottage_rent]):
+                print("Парсинг завершен")
+                return True
 
             data.insert(1, sell_type)
             print(data)
 
-            time.sleep(random.uniform(5, 8))
         except Exception as e:
-            print(e)
-            print("Ошибка в crawl_page")
+            with open("logs.txt", "a", encoding="utf8") as file:
+                file.write(str(e) + " irr crawl_page\n")
+
+        time.sleep(random.uniform(5, 8))
 
 
 def parse(category_url, category_name, sell_type):
@@ -309,15 +360,14 @@ def parse(category_url, category_name, sell_type):
 
     total_pages = get_total_pages(get_html(category_url))
 
-    print(total_pages)
-
-    # for page in range(1, total_pages + 1):
-    #     url_gen = base_url + page_part + str(page) + parameters_part
-    #     crawl_page(get_html(url_gen))
-
-    for page in range(1, 2):
+    for page in range(1, total_pages + 1):
         url_gen = category_url + page_part + str(page)
-        crawl_page(get_html(url_gen), category_name, sell_type)
+        if page == 1:
+            completed = crawl_page(True, get_html(url_gen), category_name, sell_type)
+        else:
+            completed = crawl_page(False, get_html(url_gen), category_name, sell_type)
+        if completed:
+            break
 
 
 def main():
@@ -343,6 +393,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # на каких записях останавливаться
+    with open("breakpoints/irr.txt", "r", encoding="utf8") as file:
+        break_apartment_sell, break_apartment_rent, break_commercials_sell, break_commercial_rent, break_cottage_sell, break_cottage_rent = [tuple(x.strip().split("--")) for x in file.readlines()]
+
     # получаем вчерашнюю дату
     today = datetime.datetime.today()
     yesterday = str(today - datetime.timedelta(days=2)).split()[0].split("-")
@@ -364,6 +418,6 @@ if __name__ == "__main__":
         "11": "ноября",
         "12": "декабря"
     }
-    break_point = yesterday[2] + " " + months[yesterday[1]]
+    date_break_point = yesterday[2] + " " + months[yesterday[1]]
 
     main()

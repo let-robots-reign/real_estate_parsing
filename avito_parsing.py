@@ -378,52 +378,49 @@ def get_commercial_data(url, html):
     return None
 
 
-def crawl_page(html, category):
+def crawl_page(first_offer, html, category):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
-    first_offer = True
     for offer in offers:
         try:
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
                 modifier = "w" if category == "apartments" else "a"
                 with open("breakpoints/avito.txt", modifier, encoding="utf8") as file:
-                    file.write("%s: %s,%s\n" % (category, offer.find("a", class_="item-description-title-link").get("title"),
+                    file.write("%s--%s\n" % (offer.find("a", class_="item-description-title-link").get("title"),
                                                  offer.find("span", {"class": "price", "itemprop": "price"}).get("content")))
                 first_offer = False
 
             if offer.find("div", class_="js-item-date c-2").text.strip() == "2 дня назад":
                 print("Парсинг завершен")
-                return
+                return True
 
             key_info = (offer.find("a", class_="item-description-title-link").get("title"), offer.find("span", {"class": "price", "itemprop": "price"}).get("content"))
-            print(key_info)
 
             if any(x == key_info for x in [break_apartment, break_cottage, break_land, break_commercial]):
                 print("Парсинг завершен")
                 return True
 
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
-            print(url)
 
             data = []
             if category == "apartments":
                 data = get_apartment_data(url, get_html(url))
                 # записываем ключевую информация, чтобы потом найти дубликаты
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[3].split("-")[0], data[4], data[6]))
+                    file.write("%s--%s--%s--%s--%s\n" % (data[0], data[3].split("-")[0], data[4], data[6], url))
             elif category == "cottages":
                 data = get_cottage_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[3], data[4]))
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
             elif category == "lands":
                 data = get_land_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s\n" % (data[0], data[5]))
+                    file.write("%s--%s--%s\n" % (data[0], data[5], url))
             elif category == "commercials":
                 data = get_commercial_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[3], data[5]))
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[5], url))
 
             print(data)
 
@@ -443,7 +440,10 @@ def parse(category_url, base_url, category_name):
 
     for page in range(1, total_pages + 1):
         url_gen = base_url + page_part + str(page) + parameters_part
-        completed = crawl_page(get_html(url_gen), category_name)
+        if page == 1:
+            completed = crawl_page(True, get_html(url_gen), category_name)
+        else:
+            completed = crawl_page(False, get_html(url_gen), category_name)
         if completed:
             break
 
@@ -469,9 +469,8 @@ def main():
 if __name__ == "__main__":
     # на каких записях останавливаться
     with open("breakpoints/avito.txt", "r", encoding="utf8") as file:
-        break_apartment, break_cottage, break_land, break_commercial = [tuple(x.split(":")[1].strip().rsplit(",", maxsplit=1))
+        break_apartment, break_cottage, break_land, break_commercial = [tuple(x.strip().split("--"))
                                                                         for x in file.readlines()]
-        print(break_apartment, break_cottage, break_land, break_commercial)
 
     # defining chrome options for selenium
     # options = Options()
