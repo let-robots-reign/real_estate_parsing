@@ -348,6 +348,8 @@ def crawl_page(html, category, sell_type):
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
     offers = [x for x in soup.find("div", id="frontend-serp").find("div").find_all("div")
               if x.get("class") is not None and "offer-container" in x.get("class")[0]]
+    if offers is None:
+        return True
     for offer in offers:
         try:
             url = offer.find("a").get("href")

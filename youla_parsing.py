@@ -27,7 +27,8 @@ def get_date(html, k):
             return "too old"
     except Exception as e:
         date = "Не указано"
-        print(str(e) + " date")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_date\n")
     return date
 
 
@@ -49,7 +50,8 @@ def get_category(html, k):
         elif "Участок" in title:
             return "Участок"
     except Exception as e:
-        print(str(e) + " category")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_category\n")
     return None
 
 
@@ -57,7 +59,8 @@ def get_address(driver):
     try:
         address = driver.find_element_by_tag_name("table").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("span")[0].text.strip()
     except Exception as e:
-        print(str(e) + " address")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_address\n")
         address = "Не указано"
     return address
 
@@ -76,7 +79,8 @@ def get_price(driver):
     try:
         price = driver.find_element_by_css_selector("div[class='sticky-inner-wrapper']").find_element_by_tag_name("span").text.strip()
     except Exception as e:
-        print(str(e) + " price")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_price\n")
         price = "Не указано"
     return price
 
@@ -89,7 +93,8 @@ def get_seller_info(driver):
         seller_name = seller_name[:seller_name.rfind("(")]
         seller_type = block.find_element_by_tag_name("div").text.strip()
     except Exception as e:
-        print(str(e) + " seller info")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_seller_info\n")
     return seller_type, seller_name
 
 
@@ -101,7 +106,8 @@ def get_photos(driver):
             images = driver.find_element_by_css_selector("div[data-test-component='ProductGallery']").find_element_by_tag_name("img").get_attribute("src")
     except Exception as e:
         images = "Не указано"
-        print(str(e) + " images")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_photos\n")
     return images
 
 
@@ -110,7 +116,8 @@ def get_description(driver):
         description = driver.find_element_by_tag_name("table").find_elements_by_tag_name("tbody")[1].find_element_by_tag_name("td").text.strip()
     except Exception as e:
         description = "Не указано"
-        print(str(e) + " description")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_description\n")
     return description
 
 
@@ -122,7 +129,8 @@ def get_seller_phone(driver):
         phone = driver.find_element_by_xpath('//*[@id="app"]/div[2]/div[10]/div/div/div/div[2]/div[2]/div/a').text.strip()
     except Exception as e:
         phone = "Не указано"
-        print(str(e) + " phone")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_seller_phone\n")
     return phone
 
 
@@ -153,7 +161,8 @@ def get_apartment_params(driver):
             elif "Год постройки" in params[i].text.strip():
                 year = values[i].text.strip()
     except Exception as e:
-        print(str(e) + " apartment params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_apartment_params\n")
     return material, lift, year, rooms_number, floor, total_floors, total_area, kitchen_area, repair
 
 
@@ -183,7 +192,8 @@ def get_cottage_params(driver):
                 else:
                     comforts += params[i].text.strip() + " - " + values[i].text.strip().lower() + "; "
     except Exception as e:
-        print(str(e) + " cottage params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " youla get_cottage_params\n")
     return total_area, material, total_floors, bedrooms, land_area, status, comforts
 
 
@@ -208,8 +218,8 @@ def get_apartment_data(url):
 
     driver.quit()
 
-    return [address, selling_type, material, lift, year, rooms_number, floor, total_floors, total_area,
-            kitchen_area, repair, price, seller_type, images, description, seller_name, phone]
+    return [address, price, selling_type, material, lift, year, rooms_number, floor, total_floors, total_area,
+            kitchen_area, repair, seller_type, images, description, seller_name, phone]
 
 
 def get_cottage_data(url, category):
@@ -233,7 +243,7 @@ def get_cottage_data(url, category):
     if category == "Участок":
         material, total_floors = "Участок", "Участок"
 
-    return [address, selling_type, category, price, total_area, material, total_floors, bedrooms,
+    return [address, price, selling_type, category, total_area, material, total_floors, bedrooms,
             land_area, status, comforts, images, description, phone]
 
 
@@ -251,8 +261,6 @@ def crawl_page(html):
             if date == "too old" and len(offer.get("class")) == 1:
                 return True
             k += 1
-            # TODO: проверить на дубликат
-            # TODO: проверить, существует ли страница
             url = "https://youla.ru" + offer.find("a").get("href")
             print(url)
             if category is None or "saratov" not in url:
@@ -261,8 +269,12 @@ def crawl_page(html):
             data = []
             if category == "Квартира":
                 data = get_apartment_data(url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[6], data[9], url))
             elif any(x in category for x in ["Дом", "Коттедж", "Таунхаус", "Дача", "Участок"]):
                 data = get_cottage_data(url, category)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
 
             data.append(date)
             print(*data, sep="\n")
@@ -276,15 +288,12 @@ def crawl_page(html):
 
 
 def parse(url):
-    # for page in range(1, total_pages + 1):
-    #     url_gen = base_url + page_part + str(page) + parameters_part
-    #     crawl_page(get_html(url_gen))
-
-    for page in range(1, 2):
+    completed = False
+    while not completed:
+        page = 1
         url_gen = url[:url.rfind("=") + 1] + str(page)
         completed = crawl_page(get_html(url_gen))
-        if completed:
-            break
+        page += 1
 
 
 def main():
@@ -293,8 +302,6 @@ def main():
 
 
 if __name__ == "__main__":
-    break_point = ""  # на каких записях скрипт остановился в прошлый раз
-
     # defining chrome options for selenium
     #options = Options()
     #options.add_argument("--window-size=1920x1080")

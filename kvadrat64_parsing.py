@@ -173,6 +173,7 @@ def get_seller_phone(url, soup):
             for info in seller_info.split("\n"):
                 if "Контактный телефон" in info:
                     phone = info.split(":")[1].strip()
+            driver.quit()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " kvadrat get_seller_phone")
