@@ -8,6 +8,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
 
+chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
 
 def get_html(url):
     req = requests.get(url, headers={"User-Agent": UserAgent().chrome})
@@ -419,6 +421,5 @@ if __name__ == "__main__":
     # options.add_argument('--disable-gpu')
     # options.add_argument('--headless')
     #
-    chrome_driver = os.getcwd() + "\\chromedriver.exe"
 
     main()

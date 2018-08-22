@@ -8,6 +8,12 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
 
+chrome_driver = os.getcwd() + "\\chromedriver.exe"
+# на каких записях останавливаться
+with open("breakpoints/kvadrat.txt", "r", encoding="utf8") as file:
+    break_apartment_sell, break_apartment_rent, break_cottages_sell, break_cottages_rent, break_commercials_sell, break_commercials_rent, break_dachas_sell, break_saratov_lands_sell, break_region_lands_sell = [
+        tuple(x.strip().split("--")) for x in file.readlines()]
+
 
 def transform_date(date_str):
     """
@@ -511,6 +517,12 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
+    # defining chrome options for selenium
+    # options = Options()
+    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
+    # options.add_argument('--disable-gpu')
+    # options.add_argument('--headless')
+
     url_apartments_sell = "http://kvadrat64.ru/sellflatbank-50-1.html"
     parse(url_apartments_sell, "apartments", "Продажа")
 
@@ -540,16 +552,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # на каких записях останавливаться
-    with open("breakpoints/kvadrat.txt", "r", encoding="utf8") as file:
-        break_apartment_sell, break_apartment_rent, break_cottages_sell, break_cottages_rent, break_commercials_sell, break_commercials_rent, break_dachas_sell, break_saratov_lands_sell, break_region_lands_sell = [tuple(x.strip().split("--")) for x in file.readlines()]
-
-    # defining chrome options for selenium
-    # options = Options()
-    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    # options.add_argument('--disable-gpu')
-    # options.add_argument('--headless')
-
-    chrome_driver = os.getcwd() + "\\chromedriver.exe"
-
     main()

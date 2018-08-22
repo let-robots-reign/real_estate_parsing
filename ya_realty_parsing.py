@@ -8,6 +8,13 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
 
+chrome_driver = os.getcwd() + "\\chromedriver.exe"
+# на каких записях останавливаться
+with open("breakpoints/ya.txt", "r", encoding="utf8") as file:
+    break_apartment_sell, break_apartment_rent, break_cottage_sell, break_cottage_rent, break_commercials_sell, break_commercial_rent = [
+        tuple(x.strip().split("--"))
+        for x in file.readlines()]
+
 
 def transform_date(date):
     """
@@ -345,7 +352,7 @@ def crawl_page(first_offer, html, category, sell_type):
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
                 modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
-                with open("breakpoints/ya.txt", modifier, encoding="utf8") as file:
+                with open("breakpoints/new_ya.txt", modifier, encoding="utf8") as file:
                     file.write("%s--%s\n" % (data[0], data[1]))
                 first_offer = False
 
@@ -385,6 +392,13 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
+    # defining chrome options for selenium
+    # options = Options()
+    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
+    # options.add_argument('--disable-gpu')
+    # options.add_argument('--headless')
+    #
+
     url_apartments_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/kvartira/?sort=DATE_DESC&page=0"
     parse(url_apartments_sell, "apartments", "Продажа")
 
@@ -405,17 +419,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # на каких записях останавливаться
-    with open("breakpoints/ya.txt", "r", encoding="utf8") as file:
-        break_apartment_sell, break_apartment_rent, break_cottage_sell, break_cottage_rent, break_commercials_sell, break_commercial_rent = [tuple(x.strip().split("--"))
-                                                                        for x in file.readlines()]
-
-    # defining chrome options for selenium
-    # options = Options()
-    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    # options.add_argument('--disable-gpu')
-    # options.add_argument('--headless')
-    #
-    chrome_driver = os.getcwd() + "\\chromedriver.exe"
-
     main()

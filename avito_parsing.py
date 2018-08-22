@@ -11,6 +11,13 @@ import pytesseract
 import os
 import sys
 
+# на каких записях останавливаться
+with open("breakpoints/avito.txt", "r", encoding="utf8") as file:
+    break_apartment, break_cottage, break_land, break_commercial = [tuple(x.strip().split("--")) for x in
+                                                                    file.readlines()]
+    print(break_apartment, break_cottage, break_land, break_commercial)
+chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
 
 def get_html(url):
     req = requests.get(url, headers={"User-Agent": UserAgent().chrome})
@@ -449,6 +456,13 @@ def parse(category_url, base_url, category_name):
 
 
 def main():
+    # defining chrome options for selenium
+    # options = Options()
+    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
+    # options.add_argument('--disable-gpu')
+    # options.add_argument('--headless')
+    #
+
     url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
     parse(url_apartments, base_url, "apartments")
@@ -467,17 +481,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # на каких записях останавливаться
-    with open("breakpoints/avito.txt", "r", encoding="utf8") as file:
-        break_apartment, break_cottage, break_land, break_commercial = [tuple(x.strip().split("--"))
-                                                                        for x in file.readlines()]
-
-    # defining chrome options for selenium
-    # options = Options()
-    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    # options.add_argument('--disable-gpu')
-    # options.add_argument('--headless')
-    #
-    chrome_driver = os.getcwd() + "\\chromedriver.exe"
-
     main()

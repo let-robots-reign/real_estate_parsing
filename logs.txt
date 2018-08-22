@@ -1,1 +1,0 @@
-'NoneType' object has no attribute 'text' ya get_description

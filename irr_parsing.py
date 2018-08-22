@@ -7,6 +7,34 @@ import datetime
 import base64
 
 
+# на каких записях останавливаться
+with open("breakpoints/irr.txt", "r", encoding="utf8") as file:
+    break_apartment_sell, break_apartment_rent, break_commercials_sell, break_commercial_rent, break_cottage_sell, break_cottage_rent = [
+        tuple(x.strip().split("--")) for x in file.readlines()]
+# получаем вчерашнюю дату
+today = datetime.datetime.today()
+yesterday = str(today - datetime.timedelta(days=2)).split()[0].split("-")
+if yesterday[1][0] == "0":
+    yesterday[1] = yesterday[1][1:]
+if yesterday[2][0] == "0":
+    yesterday[2] = yesterday[2][1:]
+months = {
+    "1": "января",
+    "2": "февраля",
+    "3": "марта",
+    "4": "апреля",
+    "5": "мая",
+    "6": "июня",
+    "7": "июля",
+    "8": "августа",
+    "9": "сентября",
+    "10": "октября",
+    "11": "ноября",
+    "12": "декабря"
+}
+date_break_point = yesterday[2] + " " + months[yesterday[1]]
+
+
 def get_html(url):
     req = requests.get(url, headers={"User-Agent": UserAgent().chrome})
     return req.text.encode(req.encoding)
@@ -388,31 +416,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # на каких записях останавливаться
-    with open("breakpoints/irr.txt", "r", encoding="utf8") as file:
-        break_apartment_sell, break_apartment_rent, break_commercials_sell, break_commercial_rent, break_cottage_sell, break_cottage_rent = [tuple(x.strip().split("--")) for x in file.readlines()]
-
-    # получаем вчерашнюю дату
-    today = datetime.datetime.today()
-    yesterday = str(today - datetime.timedelta(days=2)).split()[0].split("-")
-    if yesterday[1][0] == "0":
-        yesterday[1] = yesterday[1][1:]
-    if yesterday[2][0] == "0":
-        yesterday[2] = yesterday[2][1:]
-    months = {
-        "1": "января",
-        "2": "февраля",
-        "3": "марта",
-        "4": "апреля",
-        "5": "мая",
-        "6": "июня",
-        "7": "июля",
-        "8": "августа",
-        "9": "сентября",
-        "10": "октября",
-        "11": "ноября",
-        "12": "декабря"
-    }
-    date_break_point = yesterday[2] + " " + months[yesterday[1]]
-
     main()
