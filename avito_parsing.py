@@ -406,13 +406,13 @@ def crawl_page(first_offer, html, category):
             data = []
             if category == "apartments":
                 data = get_apartment_data(url, get_html(url))
-                # записываем ключевую информация, чтобы потом найти дубликаты
+                # записываем ключевую информацию, чтобы потом найти дубликаты
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s--%s\n" % (data[0], data[3].split("-")[0], data[4], data[6], url))
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3].split("-")[0], data[6], url))
             elif category == "cottages":
                 data = get_cottage_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
+                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
             elif category == "lands":
                 data = get_land_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
@@ -420,7 +420,7 @@ def crawl_page(first_offer, html, category):
             elif category == "commercials":
                 data = get_commercial_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[5], url))
+                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
 
             print(data)
 

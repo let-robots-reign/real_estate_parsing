@@ -303,11 +303,6 @@ def crawl_page(first_offer, html, category, sell_type):
     offers = soup.find("div", class_="listing js-productGrid ").find_all("div", class_="listing__item")
     for offer in offers:
         try:
-
-            # if offer.find("span", class_="listing__itemDate").find("div", class_="updateProduct").split()[0] < \
-            #         str(datetime.datetime.today() - datetime.timedelta(days=1)).split()[0].split("-")[-1]:
-            #     print("Парсинг завершен")
-            #     return True
             date = offer.find("span", class_="listing__itemDate").find("div", class_="updateProduct").text.strip()
             if date == date_break_point:
                 print("Парсинг завершен")
@@ -319,9 +314,9 @@ def crawl_page(first_offer, html, category, sell_type):
             data = []
             if category == "apartments":
                 data = get_apartment_data(get_html(url))
-                # записываем ключевую информация, чтобы потом найти дубликаты
+                # записываем ключевую информацию, чтобы потом найти дубликаты
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s--%s\n" % (data[0], data[3], data[4], data[5], url))
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[5], url))
             elif category == "cottages":
                 data = get_cottage_data(get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
@@ -329,7 +324,7 @@ def crawl_page(first_offer, html, category, sell_type):
             elif category == "commercials":
                 data = get_commercial_data(get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[2], data[6], url))
+                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
 
             if first_offer:
                 # сохраняем самую первую запись как точку выхода

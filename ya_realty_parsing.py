@@ -44,7 +44,9 @@ def get_html(url):
 def get_title(soup):
     try:
         title = soup.find("h1", class_="offer-card__header-text").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_title\n")
         title = "Не указано"
     return title
 
@@ -53,7 +55,8 @@ def get_address(soup):
     try:
         address = soup.find("h2", class_="offer-card__address ellipsis").text.strip()
     except Exception as e:
-        print(str(e) + " address")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_address\n")
         address = "Не указано"
     return address
 
@@ -66,7 +69,8 @@ def get_block_type(soup):
         else:
             block_type = block_type.text.strip()
     except Exception as e:
-        print(e, " block_type")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_block_type\n")
         block_type = "Не указано"
     return block_type
 
@@ -75,7 +79,8 @@ def get_price(soup):
     try:
         price = soup.find("h3", class_="offer-price offer-card__price offer-card__price").text.strip()
     except Exception as e:
-        print(str(e) + " price")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_price\n")
         price = "Не указано"
     return price
 
@@ -84,7 +89,8 @@ def get_selling_type(soup):
     try:
         selling_type = soup.find("div", class_="offer-card__terms").text.strip()
     except Exception as e:
-        print(str(e) + " selling_type")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_selling_type\n")
         selling_type = "Не указано"
     return selling_type
 
@@ -93,7 +99,8 @@ def get_seller_type(soup):
     try:
         seller_type = soup.find("div", class_="offer-card__author-note").text.strip()
     except Exception as e:
-        print(str(e) + " seller_type")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_seller_type\n")
         seller_type = "Не указано"
     return seller_type
 
@@ -107,7 +114,8 @@ def get_photos(soup):
             images.append(link)
         images = "\n".join(images)
     except Exception as e:
-        print(str(e) + " images")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_photos\n")
         images = "Не указано"
     return images
 
@@ -116,7 +124,8 @@ def get_description(soup):
     try:
         description = soup.find("div", class_="offer-card__desc-text").text.strip()
     except Exception as e:
-        print(str(e) + " description")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_description\n")
         description = "Не указано"
     return description
 
@@ -140,7 +149,8 @@ def get_date(soup):
             if int(days_passed) > 1:
                 date = "too old"
     except Exception as e:
-        print(str(e) + " date")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_date\n")
         date = "Не указано"
     return date
 
@@ -156,7 +166,8 @@ def get_seller_phone(url):
         phone = driver.find_element_by_xpath('//div[@class="helpful-info__contact-phones-string"]').text
         driver.quit()
     except Exception as e:
-        print(str(e) + " phone")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_seller_phone\n")
     return phone
 
 
@@ -193,7 +204,8 @@ def get_apartment_params(soup):
                     break
 
     except Exception as e:
-        print(str(e) + " apartment params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_apartment_params\n")
     return rooms_number, total_floors, total_area, material, year
 
 
@@ -223,7 +235,8 @@ def get_cottage_params(soup):
                 if "строится" in param:
                     year = param
     except Exception as e:
-        print(str(e) + " cottage params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_cottage_params\n")
     return total_area, land_area, comforts, year
 
 
@@ -245,7 +258,8 @@ def get_commercial_params(soup):
                 else:
                     additions += "; " + params[i].strip()
     except Exception as e:
-        print(str(e) + " cottage params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " ya get_commercial_params\n")
     return entrance, furniture, additions
 
 
@@ -263,7 +277,7 @@ def get_apartment_data(html, url):
     description = get_description(soup)
     phone = get_seller_phone(url)
 
-    return [address, block_type, rooms_number, price, total_area, total_floors, material,
+    return [address, price, block_type, rooms_number, total_area, total_floors, material,
             year, selling_type, images, description, seller_type, phone]
 
 
@@ -272,7 +286,7 @@ def get_cottage_data(html, url):
 
     title = get_title(soup)
     address = get_address(soup)
-    cottage_type = title
+    cottage_type = title.split(",")[0]
     price = get_price(soup)
     total_area, land_area, comforts, year = get_cottage_params(soup)
     selling_type = get_selling_type(soup)
@@ -280,7 +294,7 @@ def get_cottage_data(html, url):
     description = get_description(soup)
     phone = get_seller_phone(url)
 
-    return [address, cottage_type, price, total_area, land_area, comforts, year, selling_type,
+    return [address, price, cottage_type, total_area, land_area, comforts, year, selling_type,
             images, description, phone]
 
 
@@ -289,30 +303,23 @@ def get_commercial_data(html, url):
 
     title = get_title(soup)
     address = get_address(soup)
+    price = get_price(soup)
     object_type = title.split(",")[0]
     entrance, furniture, additions = get_commercial_params(soup)
     phone = get_seller_phone(url)
 
-    return [address, object_type, furniture, entrance, additions, phone]
+    return [address, price, object_type, furniture, entrance, additions, phone]
 
 
-def crawl_page(html, category, sell_type):
+def crawl_page(first_offer, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
-    no_records = soup.find("div", class_="OffersSerpNotFound")
-    if no_records is not None:
-        print("Страницы закончились")
-        return True
-
     offers = soup.find("ol", class_="OffersSerp__list").find_all("li", class_="OffersSerp__list-item_type_offer")
+    if offers is None:
+        return True
     k = 0
     for offer in offers:
         try:
-            # TODO: проверить еще на дубликат
-            # if offer.find("div", class_="OffersSerpItem__publish-date").text.strip() == break_point:
-            #     print("Парсинг завершен")
-            #     return True
-
             date = get_date(soup)
             if date == "too old":
                 print("Парсинг завершен")
@@ -323,10 +330,31 @@ def crawl_page(html, category, sell_type):
             data = []
             if category == "apartments":
                 data = get_apartment_data(get_html(url), url)
+                # записываем ключевую информация, чтобы потом найти дубликаты
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
             elif category == "commercials":
                 data = get_commercial_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[2], data[3], url))
             elif category == "cottages":
                 data = get_cottage_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
+
+            if first_offer:
+                # сохраняем самую первую запись как точку выхода
+                modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
+                with open("breakpoints/ya.txt", modifier, encoding="utf8") as file:
+                    file.write("%s--%s\n" % (data[0], data[1]))
+                first_offer = False
+
+            key_info = (data[0], data[1])
+
+            if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottage_sell,
+                                           break_cottage_rent, break_commercials_sell, break_commercial_rent]):
+                print("Парсинг завершен")
+                return True
 
             data.append(date)
             data.insert(1, sell_type)
@@ -345,16 +373,15 @@ def crawl_page(html, category, sell_type):
 
 
 def parse(category_url, category_name, sell_type):
-
-    # for page in range(1, total_pages + 1):
-    #     url_gen = base_url + page_part + str(page) + parameters_part
-    #     crawl_page(get_html(url_gen))
-
-    for page in range(2):
+    completed = False
+    while not completed:
+        page = 1
         url_gen = category_url[:category_url.rfind("=") + 1] + str(page)
-        completed = crawl_page(get_html(url_gen), category_name, sell_type)
-        if completed:
-            break
+        if page == 1:
+            completed = crawl_page(True, get_html(url_gen), category_name, sell_type)
+        else:
+            completed = crawl_page(False, get_html(url_gen), category_name, sell_type)
+        page += 1
 
 
 def main():
@@ -372,12 +399,16 @@ def main():
 
     url_commercials_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/kommercheskaya-nedvizhimost/?sort=DATE_DESC&page=0"
     parse(url_commercials_sell, "commercials", "Продажа")
+
     url_commercials_rent = "https://realty.yandex.ru/saratovskaya_oblast/snyat/kommercheskaya-nedvizhimost/?sort=DATE_DESC&page=0"
     parse(url_commercials_rent, "commercials", "Аренда")
 
 
 if __name__ == "__main__":
-    break_point = ""  # на каких записях скрипт остановился в прошлый раз
+    # на каких записях останавливаться
+    with open("breakpoints/ya.txt", "r", encoding="utf8") as file:
+        break_apartment_sell, break_apartment_rent, break_cottage_sell, break_cottage_rent, break_commercials_sell, break_commercial_rent = [tuple(x.strip().split("--"))
+                                                                        for x in file.readlines()]
 
     # defining chrome options for selenium
     # options = Options()
