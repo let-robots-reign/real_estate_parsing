@@ -38,20 +38,28 @@ def get_total_pages(html):
         else:
             total_pages = 0
     except Exception as e:
-        print(e, "total_pages")
         total_pages = 0
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_total_pages")
     return int(total_pages)
 
 
 def get_title(soup):
-    title = soup.find("td", class_="hh").text.strip()
+    try:
+        title = soup.find("td", class_="hh").text.strip()
+    except Exception as e:
+        title = "Не указано"
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_title")
     return title
 
 
 def get_price(soup):
     try:
         price = soup.find("td", class_="thprice").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_price")
         price = "Не указано"
     return price
 
@@ -66,7 +74,8 @@ def get_commercial_price(soup):
             if "за м²" in param:
                 price = "м2".join(param.split("м²"))
     except Exception as e:
-        print(e)
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_price")
     return price
 
 
@@ -80,7 +89,9 @@ def get_selling_type(soup):
             if "аренда" in info:
                 rent_info = info
                 break
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_selling_type")
         selling_type = "Не указано"
         rent_info = "Не указано"
     return selling_type, rent_info
@@ -101,7 +112,9 @@ def get_photos(soup):
         # если нет картинок в галерее, пытаемся вытащить с облоджки
         if not images:
             images = "https://kvadrat64.ru/" + soup.find("div", id="mainfotoid").find("img").get("src")
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_photos")
         images = "Не указано"
     return images
 
@@ -109,7 +122,9 @@ def get_photos(soup):
 def get_description(soup):
     try:
         description = soup.find("p", class_="dinfo").text.strip().replace("\r", "")
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_description")
         description = "Не указано"
     return description
 
@@ -123,7 +138,8 @@ def get_date(soup):
             date = date.split("VIP")[0].split("создано")[1].strip()
         date = transform_date(date)
     except Exception as e:
-        print(e, "date")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_date")
         date = "Не указано"
     return date
 
@@ -158,7 +174,8 @@ def get_seller_phone(url, soup):
                 if "Контактный телефон" in info:
                     phone = info.split(":")[1].strip()
     except Exception as e:
-        print(e, "seller phone")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_seller_phone")
         phone = "Не указано"
     return phone
 
@@ -191,7 +208,8 @@ def get_apartment_params(soup):
         else:
             block_type = "Вторичка"
     except Exception as e:
-        print(e, "apartment params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_apartment_params")
     return block_type, total_area, total_floors, material
 
 
@@ -211,7 +229,8 @@ def get_cottage_params(soup):
             elif "cтроение" in param:
                 material = param.split(":")[1].strip()
     except Exception as e:
-        print(e, "cottage params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_cottage_params")
     return total_area, material
 
 
@@ -230,7 +249,8 @@ def get_commercial_params(soup):
                 object_type = param.split(":")[1].strip()
                 break
     except Exception as e:
-        print(e, "cottage params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_commercial_params")
     return object_type
 
 
@@ -249,7 +269,8 @@ def get_dacha_params(soup):
                 total_area = param.split(":")[1].strip()
                 break
     except Exception as e:
-        print(e, "dacha params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_dacha_params")
     return total_area
 
 
@@ -268,7 +289,8 @@ def get_land_params(soup):
                 total_area = param.split(":")[1].strip()
                 break
     except Exception as e:
-        print(e, "land params")
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_land_params")
     return total_area
 
 
@@ -292,7 +314,7 @@ def get_apartment_data(html, url):
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
 
-        return [address, rent_info, block_type, rooms_number, price, total_area, total_floors, material, selling_type,
+        return [address, price, rent_info, block_type, rooms_number, total_area, total_floors, material, selling_type,
                 images, description, phone, date]
     return None
 
@@ -317,7 +339,7 @@ def get_cottage_data(html, url):
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
 
-        return [address, rent_info, cottage_type, price, total_area, selling_type, material,
+        return [address, price, rent_info, cottage_type, total_area, selling_type, material,
                 images, description, phone, date]
     return None
 
@@ -336,7 +358,7 @@ def get_commercial_data(html, url):
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
 
-        return [address, object_type, price, images, description, phone, date]
+        return [address, price, object_type, images, description, phone, date]
     return None
 
 
@@ -355,7 +377,7 @@ def get_dacha_data(html, url):
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
 
-        return [address, distance, total_area, price, images, description, phone, date]
+        return [address, price, distance, total_area, images, description, phone, date]
     return None
 
 
@@ -373,7 +395,7 @@ def get_lands_saratov_data(html, url):
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
 
-        return [address, total_area, price, images, description, phone, date]
+        return [address, price, total_area, images, description, phone, date]
     return None
 
 
@@ -392,11 +414,11 @@ def get_lands_region_data(html, url):
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
 
-        return [address, distance, total_area, price, images, description, phone, date]
+        return [address, price, distance, total_area, images, description, phone, date]
     return None
 
 
-def crawl_page(html, category, sell_type):
+def crawl_page(first_offer, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
     for offer in offers:
@@ -405,16 +427,43 @@ def crawl_page(html, category, sell_type):
             data = []
             if category == "apartments":
                 data = get_apartment_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s--%s\n" % (data[0], data[4], data[6], data[5], url))
             elif category == "commercials":
                 data = get_commercial_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
             elif category == "cottages":
                 data = get_cottage_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[4], url))
             elif category == "dachas":
                 data = get_dacha_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
             elif category == "lands_saratov":
                 data = get_lands_saratov_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
             elif category == "lands_region":
                 data = get_lands_region_data(get_html(url), url)
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
+
+            if first_offer:
+                # сохраняем самую первую запись как точку выхода
+                modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
+                with open("breakpoints/kvadrat.txt", modifier, encoding="utf8") as file:
+                    file.write("%s--%s\n" % (data[0], data[1]))
+                first_offer = False
+
+            key_info = (data[0], data[1])
+
+            if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottages_sell,
+                                           break_cottages_rent, break_commercials_sell, break_commercials_rent,
+                                           break_dachas_sell, break_saratov_lands_sell, break_region_lands_sell]):
+                print("Парсинг завершен")
+                return True
 
             if category == "apartments" or category == "cottages":
                 if sell_type == "Аренда":
@@ -423,33 +472,28 @@ def crawl_page(html, category, sell_type):
                     data.insert(1, sell_type)
                 data.pop(2)  # и удаляем срок аренды как отдельный элемент списка
 
-            # if data[-1] < datetime.datetime.today():
-            #     # сраниваем форматы datetime, чтобы знать, когда закончить парсинг
-            #     print("Парсинг завершен")
-            #     break
-            # else:
-            #     # переводим в строковый формат
-            #     data[-1] = str(data[-1])
+            if data[-1] != "Не указано" and data[-1] < datetime.datetime.today() - datetime.timedelta(days=1):
+                # сраниваем форматы datetime, чтобы знать, когда закончить парсинг
+                print("Парсинг завершен")
+                return True
+            else:
+                # переводим в строковый формат
+                data[-1] = str(data[-1]).split()[0]
 
-            data[-1] = str(data[-1]).split()[0]  # форматируем дату после проверки
             print(data)
 
-            time.sleep(random.uniform(5, 8))
         except Exception as e:
-            print(e, "crawl_page")
+            with open("logs.txt", "a", encoding="utf8") as file:
+                file.write(str(e) + " kvadrat get_crawl_page")
+
+        time.sleep(random.uniform(5, 8))
 
 
 def parse(category_url, category_name, sell_type):
 
     total_pages = get_total_pages(get_html(category_url))
 
-    print(total_pages)
-
-    # for page in range(1, total_pages + 1):
-    #     url_gen = base_url + page_part + str(page) + parameters_part
-    #     crawl_page(get_html(url_gen))
-
-    for page in range(1, 2):
+    for page in range(1, total_pages + 1):
         if (category_name == "cottages" and sell_type == "Продажа") or category_name == "lands_saratov" \
                 or category_name == "lands_region":
             url = category_url.split("-")
@@ -457,7 +501,12 @@ def parse(category_url, category_name, sell_type):
         else:
             url_gen = category_url[:category_url.rfind("-") + 1] + str(page) + ".html"
 
-        crawl_page(get_html(url_gen), category_name, sell_type)
+        if page == 1:
+            completed = crawl_page(True, get_html(url_gen), category_name, sell_type)
+        else:
+            completed = crawl_page(False, get_html(url_gen), category_name, sell_type)
+        if completed:
+            break
 
 
 def main():
@@ -490,11 +539,15 @@ def main():
 
 
 if __name__ == "__main__":
+    # на каких записях останавливаться
+    with open("breakpoints/kvadrat.txt", "r", encoding="utf8") as file:
+        break_apartment_sell, break_apartment_rent, break_cottages_sell, break_cottages_rent, break_commercials_sell, break_commercials_rent, break_dachas_sell, break_saratov_lands_sell, break_region_lands_sell = [tuple(x.strip().split("--")) for x in file.readlines()]
+
     # defining chrome options for selenium
-    options = Options()
-    options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    options.add_argument('--disable-gpu')
-    options.add_argument('--headless')
+    # options = Options()
+    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
+    # options.add_argument('--disable-gpu')
+    # options.add_argument('--headless')
 
     chrome_driver = os.getcwd() + "\\chromedriver.exe"
 
