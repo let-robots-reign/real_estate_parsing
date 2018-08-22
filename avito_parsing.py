@@ -13,7 +13,8 @@ import sys
 
 
 def get_html(url):
-    return requests.get(url, headers={"User-Agent": UserAgent().chrome}).text
+    req = requests.get(url, headers={"User-Agent": UserAgent().chrome})
+    return req.text.encode(req.encoding)
 
 
 def get_total_pages(html):
@@ -22,8 +23,8 @@ def get_total_pages(html):
         pages = soup.find("div", class_="pagination-pages clearfix").find_all("a", class_="pagination-page")[-1].get("href")
         total_pages = int(pages.split("=")[1].split("&")[0])
     except Exception as e:
-        print("Ошибка в get_total_pages")
-        print(e)
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_total_pages\n")
         sys.exit(0)
     return total_pages
 
@@ -31,7 +32,9 @@ def get_total_pages(html):
 def get_title(soup):
     try:
         title = soup.find("span", class_="title-info-title-text").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_title\n")
         title = "Не указано"
     return title
 
@@ -39,14 +42,16 @@ def get_title(soup):
 def get_address(soup):
     try:
         address = soup.find("span", itemprop="streetAddress").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_address\n")
         address = "Не указано"
     return address
 
 
 def get_selling_info(soup):
     try:
-        per_meter = False
+        per_meter = False  # если цена указана за квадратный метр
         price = soup.find("span", class_="price-value-string js-price-value-string").text.strip()
         if "за сутки" in price:
             sell_type = "Аренда: посуточно"
@@ -65,7 +70,9 @@ def get_selling_info(soup):
                 price = price + " в месяц за м2"
             else:
                 price = price + " в месяц"
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_selling info\n")
         sell_type = "Не указано"
         price = "Не указано"
     return sell_type, price
@@ -74,7 +81,9 @@ def get_selling_info(soup):
 def get_deposit(soup):
     try:
         deposit = soup.find("div", class_="item-price-sub-price").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_deposit\n")
         deposit = "Не указано"
     return deposit
 
@@ -86,7 +95,9 @@ def get_seller_type(soup):
             seller_type = "Посредник"
         else:
             seller_type = "Собственник"
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_seller_type\n")
         seller_type = "Не указано"
     return seller_type
 
@@ -94,7 +105,9 @@ def get_seller_type(soup):
 def get_seller_name(soup):
     try:
         seller_name = soup.find("div", class_="seller-info-name").find("a").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_seller_name\n")
         seller_name = "Не указано"
     return seller_name
 
@@ -111,7 +124,9 @@ def get_photos(soup):
         # если нет фото, возьмем фото с "обложки"
         try:
             images = soup.find("span", class_="gallery-img-cover").get("style").split(":")[1].strip()[4:-2]
-        except:
+        except Exception as e:
+            with open("logs.txt", "a", encoding="utf8") as file:
+                file.write(str(e) + " avito get_photos\n")
             images = "Не указано"
     return images
 
@@ -119,7 +134,9 @@ def get_photos(soup):
 def get_description(soup):
     try:
         description = soup.find("div", class_="item-description-text").find("p").text.strip()
-    except:
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_description\n")
         description = "Не указано"
     return description
 
@@ -131,23 +148,28 @@ def get_seller_phone(url):
     driver = webdriver.Chrome(executable_path=chrome_driver)
 
     driver.get(url)
-    button = driver.find_element_by_xpath('//a[@class="button item-phone-button js-item-phone-button '
-                                          'button-origin button-origin-blue button-origin_full-width '
-                                          'button-origin_large-extra item-phone-button_hide-phone '
-                                          'item-phone-button_card js-item-phone-button_card"]')
-    button.click()
-    driver.implicitly_wait(5)
-    driver.save_screenshot("phone_number.png")
+    try:
+        button = driver.find_element_by_xpath('//a[@class="button item-phone-button js-item-phone-button '
+                                              'button-origin button-origin-blue button-origin_full-width '
+                                              'button-origin_large-extra item-phone-button_hide-phone '
+                                              'item-phone-button_card js-item-phone-button_card"]')
+        button.click()
+        time.sleep(2)
+        driver.save_screenshot("phone_number.png")
 
-    image = driver.find_element_by_xpath('//div[@class="item-phone-big-number js-item-phone-big-number"]//*')
+        image = driver.find_element_by_xpath('//div[@class="item-phone-big-number js-item-phone-big-number"]//*')
 
-    cropped = Image.open("phone_number.png")
-    x, y = image.location["x"], image.location["y"]
-    width, height = image.size["width"], image.size["height"]
-    cropped.crop((x - 50, y, x - 50 + width, y + height)).save("phone.gif")
+        cropped = Image.open("phone_number.png")
+        x, y = image.location["x"], image.location["y"]
+        width, height = image.size["width"], image.size["height"]
+        cropped.crop((x - 50, y, x - 50 + width, y + height)).save("phone.gif")
 
-    phone = Image.open("phone.gif")
-    phone_text = image_to_string(phone)
+        phone = Image.open("phone.gif")
+        phone_text = image_to_string(phone)
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_seller_phone\n")
+        phone_text = "Не указано"
 
     driver.quit()
 
@@ -174,8 +196,9 @@ def get_apartment_params(soup):
                 kitchen_area = info.split(":")[1].split("м²")[0].strip()
             elif "Жилая площадь" in info:
                 living_area = info.split(":")[1].split("м²")[0].strip()
-    except:
-        pass
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_apartment_params\n")
     return rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area
 
 
@@ -197,8 +220,9 @@ def get_cottage_params(soup):
                 total_area = info.split(":")[1].split("м²")[0].strip()
             elif "Площадь участка" in info:
                 land_area = info.split(":")[1].split("сот")[0].strip() + " сот"
-    except:
-        pass
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_cottage_params\n")
     return house_type, total_floors, distance, material, total_area, land_area
 
 
@@ -214,8 +238,9 @@ def get_land_params(soup):
                 distance = info.split("км")[0].strip() + " км"
             elif "Площадь" in label:
                 area = info.split("сот")[0].strip() + " сот"
-    except:
-        pass
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_land_params\n")
     return distance, area
 
 
@@ -231,8 +256,9 @@ def get_commercial_params(soup):
                 area = info.split(":")[1].split("м²")[0].strip()
             elif "Класс здания" in label:
                 office_class = info.split(":")[1].strip()
-    except:
-        pass
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_commercial_params\n")
     return office_class, area
 
 
@@ -250,8 +276,8 @@ def get_apartment_data(url, html):
         description = get_description(soup)
         phone = get_seller_phone(url)
 
-        return (address, sell_type, block_type, rooms_number, floor_number, total_floors, total_area,
-                kitchen_area, living_area, price, seller_type, images, description, seller_name, phone)
+        return [address, sell_type, block_type, rooms_number, floor_number, total_floors, total_area,
+                kitchen_area, living_area, price, seller_type, images, description, seller_name, phone]
     return None
 
 
@@ -269,8 +295,8 @@ def get_cottage_data(url, html):
         description = get_description(soup)
         phone = get_seller_phone(url)
 
-        return (address, sell_type, material, total_floors, total_area, land_area, price, distance,
-                seller_type, images, description, seller_name, phone)
+        return [address, sell_type, material, total_floors, total_area, land_area, price, distance,
+                seller_type, images, description, seller_name, phone]
     return None
 
 
@@ -300,8 +326,8 @@ def get_land_data(url, html):
         description = get_description(soup)
         phone = get_seller_phone(url)
 
-        return (address, sell_type, deposit, land_type, distance, area, price, seller_type, images,
-                description, seller_name, phone)
+        return [address, sell_type, deposit, land_type, distance, area, price, seller_type, images,
+                description, seller_name, phone]
     return None
 
 
@@ -347,39 +373,66 @@ def get_commercial_data(url, html):
         description = get_description(soup)
         phone = get_seller_phone(url)
 
-        return (address, sell_type, deposit, object_type, office_class, area, price, seller_type,
-                images, description, seller_name, phone)
+        return [address, sell_type, deposit, object_type, office_class, area, price, seller_type,
+                images, description, seller_name, phone]
     return None
 
 
 def crawl_page(html, category):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
+    first_offer = True
     for offer in offers:
         try:
-            # TODO: проверить еще на дубликат
-            if offer.find("div", class_="js-item-date c-2").text.strip() == break_point:
+            if first_offer:
+                # сохраняем самую первую запись как точку выхода
+                modifier = "w" if category == "apartments" else "a"
+                with open("breakpoints/avito.txt", modifier, encoding="utf8") as file:
+                    file.write("%s: %s,%s\n" % (category, offer.find("a", class_="item-description-title-link").get("title"),
+                                                 offer.find("span", {"class": "price", "itemprop": "price"}).get("content")))
+                first_offer = False
+
+            if offer.find("div", class_="js-item-date c-2").text.strip() == "2 дня назад":
                 print("Парсинг завершен")
-                break
+                return
+
+            key_info = (offer.find("a", class_="item-description-title-link").get("title"), offer.find("span", {"class": "price", "itemprop": "price"}).get("content"))
+            print(key_info)
+
+            if any(x == key_info for x in [break_apartment, break_cottage, break_land, break_commercial]):
+                print("Парсинг завершен")
+                return True
+
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
+            print(url)
 
             data = []
             if category == "apartments":
                 data = get_apartment_data(url, get_html(url))
+                # записываем ключевую информация, чтобы потом найти дубликаты
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s--%s\n" % (data[0], data[3].split("-")[0], data[4], data[6]))
             elif category == "cottages":
                 data = get_cottage_data(url, get_html(url))
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[3], data[4]))
             elif category == "lands":
                 data = get_land_data(url, get_html(url))
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s\n" % (data[0], data[5]))
             elif category == "commercials":
                 data = get_commercial_data(url, get_html(url))
+                with open("total_data.txt", "a", encoding="utf8") as file:
+                    file.write("%s--%s--%s\n" % (data[0], data[3], data[5]))
 
             print(data)
 
-            time.sleep(random.uniform(5, 8))
         except Exception as e:
-            print("Ошибка в crawl_page")
-            print(e)
-            #sys.exit(0)
+            with open("logs.txt", "a", encoding="utf8") as file:
+                file.write(str(e) + " avito crawl_page\n")
+                print(str(e) + " avito crawl_page")
+
+        time.sleep(random.uniform(5, 8))
 
 
 def parse(category_url, base_url, category_name):
@@ -388,15 +441,11 @@ def parse(category_url, base_url, category_name):
 
     total_pages = get_total_pages(get_html(category_url))
 
-    # for page in range(1, total_pages + 1):
-    #     url_gen = base_url + page_part + str(page) + parameters_part
-    #     crawl_page(get_html(url_gen))
-
-    for page in range(1):
+    for page in range(1, total_pages + 1):
         url_gen = base_url + page_part + str(page) + parameters_part
-        crawl_page(get_html(url_gen), category_name)
-
-    #print(total_pages)
+        completed = crawl_page(get_html(url_gen), category_name)
+        if completed:
+            break
 
 
 def main():
@@ -418,7 +467,11 @@ def main():
 
 
 if __name__ == "__main__":
-    break_point = "1 день назад"  # на каких записях останавливаться
+    # на каких записях останавливаться
+    with open("breakpoints/avito.txt", "r", encoding="utf8") as file:
+        break_apartment, break_cottage, break_land, break_commercial = [tuple(x.split(":")[1].strip().rsplit(",", maxsplit=1))
+                                                                        for x in file.readlines()]
+        print(break_apartment, break_cottage, break_land, break_commercial)
 
     # defining chrome options for selenium
     # options = Options()
