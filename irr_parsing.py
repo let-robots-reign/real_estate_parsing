@@ -5,12 +5,37 @@ import random
 from fake_useragent import UserAgent
 import datetime
 import base64
+from database import DataBase
 
 
 # на каких записях останавливаться
 with open("breakpoints/irr.txt", "r", encoding="utf8") as file:
-    break_apartment_sell, break_apartment_rent, break_commercials_sell, break_commercial_rent, break_cottage_sell, break_cottage_rent = [
-        tuple(x.strip().split("--")) for x in file.readlines()]
+    breakpoints = file.readlines()
+    try:
+        break_apartment_sell = tuple(breakpoints[0].strip().split("--"))
+    except:
+        break_apartment_sell = None
+    try:
+        break_apartment_rent = tuple(breakpoints[1].strip().split("--"))
+    except:
+        break_apartment_rent = None
+    try:
+        break_commercial_sell = tuple(breakpoints[2].strip().split("--"))
+    except:
+        break_commercial_sell = None
+    try:
+        break_commercial_rent = tuple(breakpoints[3].strip().split("--"))
+    except:
+        break_commercial_rent = None
+    try:
+        break_cottage_sell = tuple(breakpoints[4].strip().split("--"))
+    except:
+        break_cottage_sell = None
+    try:
+        break_cottage_rent = tuple(breakpoints[5].strip().split("--"))
+    except:
+        break_cottage_rent = None
+
 # получаем вчерашнюю дату
 today = datetime.datetime.today()
 yesterday = str(today - datetime.timedelta(days=2)).split()[0].split("-")
@@ -33,6 +58,11 @@ months = {
     "12": "декабря"
 }
 date_break_point = yesterday[2] + " " + months[yesterday[1]]
+
+db = DataBase()
+db.create_table("irr_apartments")
+db.create_table("irr_cottages")
+db.create_table("irr_commercials")
 
 
 def get_html(url):
@@ -363,12 +393,13 @@ def crawl_page(first_offer, html, category, sell_type):
 
             key_info = (data[0], data[1])
 
-            if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_commercials_sell,
+            if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_commercial_sell,
                                            break_commercial_rent, break_cottage_sell, break_cottage_rent]):
                 print("Парсинг завершен")
                 return True
 
             data.insert(1, sell_type)
+            db.insert_data("irr_%s" % category, data)
             print(data)
 
         except Exception as e:

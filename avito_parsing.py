@@ -10,13 +10,36 @@ from pytesseract import image_to_string
 import pytesseract
 import os
 import sys
+from database import DataBase
 
 # на каких записях останавливаться
 with open("breakpoints/avito.txt", "r", encoding="utf8") as file:
-    break_apartment, break_cottage, break_land, break_commercial = [tuple(x.strip().split("--")) for x in
-                                                                    file.readlines()]
+    breakpoints = file.readlines()
+    try:
+        break_apartment = tuple(breakpoints[0].strip().split("--"))
+    except:
+        break_apartment = None
+    try:
+        break_cottage = tuple(breakpoints[1].strip().split("--"))
+    except:
+        break_cottage = None
+    try:
+        break_land = tuple(breakpoints[2].strip().split("--"))
+    except:
+        break_land = None
+    try:
+        break_commercial = tuple(breakpoints[3].strip().split("--"))
+    except:
+        break_commercial = None
     print(break_apartment, break_cottage, break_land, break_commercial)
+
 chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
+db = DataBase()
+db.create_table("avito_apartments")
+db.create_table("avito_cottages")
+db.create_table("avito_lands")
+db.create_table("avito_commercials")
 
 
 def get_html(url):
@@ -429,6 +452,7 @@ def crawl_page(first_offer, html, category):
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s\n" % (data[0], data[3], url))
 
+            db.insert_data("avito_%s", data)
             print(data)
 
         except Exception as e:

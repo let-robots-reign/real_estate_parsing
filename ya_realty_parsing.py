@@ -7,13 +7,42 @@ import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
+from database import DataBase
 
-chrome_driver = os.getcwd() + "\\chromedriver.exe"
 # на каких записях останавливаться
 with open("breakpoints/ya.txt", "r", encoding="utf8") as file:
-    break_apartment_sell, break_apartment_rent, break_cottage_sell, break_cottage_rent, break_commercials_sell, break_commercial_rent = [
-        tuple(x.strip().split("--"))
-        for x in file.readlines()]
+    breakpoints = file.readlines()
+    try:
+        break_apartment_sell = tuple(breakpoints[0].strip().split("--"))
+    except:
+        break_apartment_sell = None
+    try:
+        break_apartment_rent = tuple(breakpoints[1].strip().split("--"))
+    except:
+        break_apartment_rent = None
+    try:
+        break_cottage_sell = tuple(breakpoints[2].strip().split("--"))
+    except:
+        break_cottage_sell = None
+    try:
+        break_cottage_rent = tuple(breakpoints[3].strip().split("--"))
+    except:
+        break_cottage_rent = None
+    try:
+        break_commercial_sell = tuple(breakpoints[4].strip().split("--"))
+    except:
+        break_commercial_sell = None
+    try:
+        break_commercial_rent = tuple(breakpoints[5].strip().split("--"))
+    except:
+        break_commercial_rent = None
+
+chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
+db = DataBase()
+db.create_table("ya_apartments")
+db.create_table("ya_cottages")
+db.create_table("ya_commercials")
 
 
 def transform_date(date):
@@ -359,12 +388,13 @@ def crawl_page(first_offer, html, category, sell_type):
             key_info = (data[0], data[1])
 
             if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottage_sell,
-                                           break_cottage_rent, break_commercials_sell, break_commercial_rent]):
+                                           break_cottage_rent, break_commercial_sell, break_commercial_rent]):
                 print("Парсинг завершен")
                 return True
 
             data.append(date)
             data.insert(1, sell_type)
+            db.insert_data("ya_%s" % category, data)
             print(*data, sep="\n")
             print("--------------------------------------")
 

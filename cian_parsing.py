@@ -7,8 +7,14 @@ import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
+from database import DataBase
 
 chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
+db = DataBase()
+db.create_table("cian_apartments")
+db.create_table("cian_cottages")
+db.create_table("cian_commercials")
 
 
 def get_html(url):
@@ -375,6 +381,7 @@ def crawl_page(html, category, sell_type):
                 return True
 
             data.insert(1, sell_type)
+            db.insert_data("cian_%s" % category, data)
             print(*data, sep="\n")
             print("--------------------------------------")
 

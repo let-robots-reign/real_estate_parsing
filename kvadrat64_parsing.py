@@ -7,12 +7,58 @@ import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
+from database import DataBase
 
-chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
 # на каких записях останавливаться
 with open("breakpoints/kvadrat.txt", "r", encoding="utf8") as file:
-    break_apartment_sell, break_apartment_rent, break_cottages_sell, break_cottages_rent, break_commercials_sell, break_commercials_rent, break_dachas_sell, break_saratov_lands_sell, break_region_lands_sell = [
-        tuple(x.strip().split("--")) for x in file.readlines()]
+    breakpoints = file.readlines()
+    try:
+        break_apartment_sell = tuple(breakpoints[0].strip().split("--"))
+    except:
+        break_apartment_sell = None
+    try:
+        break_apartment_rent = tuple(breakpoints[1].strip().split("--"))
+    except:
+        break_apartment_rent = None
+    try:
+        break_cottage_sell = tuple(breakpoints[2].strip().split("--"))
+    except:
+        break_cottage_sell = None
+    try:
+        break_cottage_rent = tuple(breakpoints[3].strip().split("--"))
+    except:
+        break_cottage_rent = None
+    try:
+        break_commercial_sell = tuple(breakpoints[4].strip().split("--"))
+    except:
+        break_commercial_sell = None
+    try:
+        break_commercial_rent = tuple(breakpoints[5].strip().split("--"))
+    except:
+        break_commercial_rent = None
+    try:
+        break_dacha_sell = tuple(breakpoints[6].strip().split("--"))
+    except:
+        break_dacha_sell = None
+    try:
+        break_saratov_land_sell = tuple(breakpoints[7].strip().split("--"))
+    except:
+        break_saratov_land_sell = None
+    try:
+        break_region_land_sell = tuple(breakpoints[8].strip().split("--"))
+    except:
+        break_region_land_sell = None
+
+chrome_driver = os.getcwd() + "\\chromedriver.exe"
+
+db = DataBase()
+db.create_table("kvardat_apartments")
+db.create_table("kvadrat_cottages")
+db.create_table("kvadrat_commercials")
+db.create_table("kvadrat_dachas")
+db.create_table("kvadrat_lands_saratov")
+db.create_table("kvadrat_lands_region")
 
 
 def transform_date(date_str):
@@ -466,9 +512,9 @@ def crawl_page(first_offer, html, category, sell_type):
 
             key_info = (data[0], data[1])
 
-            if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottages_sell,
-                                           break_cottages_rent, break_commercials_sell, break_commercials_rent,
-                                           break_dachas_sell, break_saratov_lands_sell, break_region_lands_sell]):
+            if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottage_sell,
+                                           break_cottage_rent, break_commercial_sell, break_commercial_rent,
+                                           break_dacha_sell, break_saratov_land_sell, break_region_land_sell]):
                 print("Парсинг завершен")
                 return True
 
@@ -487,6 +533,7 @@ def crawl_page(first_offer, html, category, sell_type):
                 # переводим в строковый формат
                 data[-1] = str(data[-1]).split()[0]
 
+            db.insert_data("kvadrat_%s" % category, data)
             print(data)
 
         except Exception as e:
