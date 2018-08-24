@@ -523,7 +523,9 @@ def crawl_page(first_offer, html, category, sell_type):
                     data.insert(1, sell_type + "; " + data[1])  # прибавляем срок аренды
                 else:
                     data.insert(1, sell_type)
-                data.pop(2)  # и удаляем срок аренды как отдельный элемент списка
+                data.pop(3)  # и удаляем срок аренды как отдельный элемент списка
+            elif category == "commercials":
+                data.insert(1, sell_type)
 
             if data[-1] != "Не указано" and data[-1] < datetime.datetime.today() - datetime.timedelta(days=1):
                 # сраниваем форматы datetime, чтобы знать, когда закончить парсинг
@@ -538,7 +540,7 @@ def crawl_page(first_offer, html, category, sell_type):
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
-                file.write(str(e) + " kvadrat get_crawl_page")
+                file.write(str(e) + " kvadrat get_crawl_page\n")
 
         time.sleep(random.uniform(5, 8))
 

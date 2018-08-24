@@ -11,9 +11,8 @@ from database import DataBase
 
 chrome_driver = os.getcwd() + "\\chromedriver.exe"
 db = DataBase()
-db.create_table("cian_apartments")
-db.create_table("cian_cottages")
-db.create_table("cian_commercials")
+db.create_table("youla_apartments")
+db.create_table("youla_cottages")
 
 
 def get_html(url):
@@ -276,15 +275,16 @@ def crawl_page(html):
             data = []
             if category == "Квартира":
                 data = get_apartment_data(url)
+                db.insert_data("youla_apartments", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s\n" % (data[0], data[6], data[9], url))
             elif any(x in category for x in ["Дом", "Коттедж", "Таунхаус", "Дача", "Участок"]):
                 data = get_cottage_data(url, category)
+                data.append(date)
+                db.insert_data("youla_cottages", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
 
-            data.append(date)
-            db.insert_data("youla_%s" % category, data)
             print(*data, sep="\n")
             print("--------------------------------------")
 

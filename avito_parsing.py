@@ -452,7 +452,7 @@ def crawl_page(first_offer, html, category):
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s\n" % (data[0], data[3], url))
 
-            db.insert_data("avito_%s", data)
+            db.insert_data("avito_%s" % category, data)
             print(data)
 
         except Exception as e:

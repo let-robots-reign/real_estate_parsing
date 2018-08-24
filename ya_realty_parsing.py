@@ -381,7 +381,7 @@ def crawl_page(first_offer, html, category, sell_type):
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
                 modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
-                with open("breakpoints/new_ya.txt", modifier, encoding="utf8") as file:
+                with open("breakpoints/ya.txt", modifier, encoding="utf8") as file:
                     file.write("%s--%s\n" % (data[0], data[1]))
                 first_offer = False
 

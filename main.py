@@ -17,19 +17,12 @@ if os.path.isfile("total_data.txt"):
 if os.path.isfile("logs.txt"):
     os.remove("logs.txt")
 
-kvadrat = kvadrat64_parsing.main()
-irr = irr_parsing.main()
-youla = youla_parsing.main()
-ya = ya_realty_parsing.main()
-cian = cian_parsing.main()
-avito = avito_parsing.main()
-
-t1 = Process(target=kvadrat).start()
-t2 = Process(target=irr).start()
-t3 = Process(target=youla).start()
-t4 = Process(target=ya).start()
-t5 = Process(target=cian).start()
-t6 = Process(target=avito).start()
+t1 = Process(target=kvadrat64_parsing.main).start()
+t2 = Process(target=irr_parsing.main).start()
+t3 = Process(target=youla_parsing.main).start()
+t4 = Process(target=ya_realty_parsing.main).start()
+t5 = Process(target=cian_parsing.main).start()
+t6 = Process(target=avito_parsing.main).start()
 
 total_data = {}
 
