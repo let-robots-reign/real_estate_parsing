@@ -92,7 +92,7 @@ def get_total_pages(html):
     except Exception as e:
         total_pages = 0
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_total_pages")
+            file.write(str(e) + " kvadrat get_total_pages\n")
     return int(total_pages)
 
 
@@ -102,7 +102,7 @@ def get_title(soup):
     except Exception as e:
         title = "Не указано"
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_title")
+            file.write(str(e) + " kvadrat get_title\n")
     return title
 
 
@@ -111,7 +111,7 @@ def get_price(soup):
         price = soup.find("td", class_="thprice").text.strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_price")
+            file.write(str(e) + " kvadrat get_price\n")
         price = "Не указано"
     return price
 
@@ -127,7 +127,7 @@ def get_commercial_price(soup):
                 price = "м2".join(param.split("м²"))
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_price")
+            file.write(str(e) + " kvadrat get_price\n")
     return price
 
 
@@ -143,7 +143,7 @@ def get_selling_type(soup):
                 break
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_selling_type")
+            file.write(str(e) + " kvadrat get_selling_type\n")
         selling_type = "Не указано"
         rent_info = "Не указано"
     return selling_type, rent_info
@@ -166,7 +166,7 @@ def get_photos(soup):
             images = "https://kvadrat64.ru/" + soup.find("div", id="mainfotoid").find("img").get("src")
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_photos")
+            file.write(str(e) + " kvadrat get_photos\n")
         images = "Не указано"
     return images
 
@@ -176,7 +176,7 @@ def get_description(soup):
         description = soup.find("p", class_="dinfo").text.strip().replace("\r", "")
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_description")
+            file.write(str(e) + " kvadrat get_description\n")
         description = "Не указано"
     return description
 
@@ -191,7 +191,7 @@ def get_date(soup):
         date = transform_date(date)
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_date")
+            file.write(str(e) + " kvadrat get_date\n")
         date = "Не указано"
     return date
 
@@ -228,7 +228,7 @@ def get_seller_phone(url, soup):
             driver.quit()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_seller_phone")
+            file.write(str(e) + " kvadrat get_seller_phone\n")
         phone = "Не указано"
     return phone
 
@@ -262,7 +262,7 @@ def get_apartment_params(soup):
             block_type = "Вторичка"
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_apartment_params")
+            file.write(str(e) + " kvadrat get_apartment_params\n")
     return block_type, total_area, total_floors, material
 
 
@@ -283,7 +283,7 @@ def get_cottage_params(soup):
                 material = param.split(":")[1].strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_cottage_params")
+            file.write(str(e) + " kvadrat get_cottage_params\n")
     return total_area, material
 
 
@@ -303,7 +303,7 @@ def get_commercial_params(soup):
                 break
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_commercial_params")
+            file.write(str(e) + " kvadrat get_commercial_params\n")
     return object_type
 
 
@@ -323,7 +323,7 @@ def get_dacha_params(soup):
                 break
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_dacha_params")
+            file.write(str(e) + " kvadrat get_dacha_params\n")
     return total_area
 
 
@@ -343,7 +343,7 @@ def get_land_params(soup):
                 break
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
-            file.write(str(e) + " kvadrat get_land_params")
+            file.write(str(e) + " kvadrat get_land_params\n")
     return total_area
 
 
