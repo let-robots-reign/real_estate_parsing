@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -5,16 +7,19 @@ import random
 from fake_useragent import UserAgent
 import datetime
 from selenium import webdriver
+from xvfbwrapper import Xvfb
 from selenium.webdriver.chrome.options import Options
-import os
 from database import DataBase
 
-chrome_driver = os.getcwd() + "\\chromedriver.exe"
 
 db = DataBase()
 db.create_table("cian_apartments")
 db.create_table("cian_cottages")
 db.create_table("cian_commercials")
+
+# defining chrome options for selenium
+options = Options()
+options.add_argument("--no-sandbox")
 
 
 def get_html(url):
@@ -26,7 +31,7 @@ def get_title(soup):
     try:
         title = soup.find("h1").text.strip()
     except Exception as e:
-        print(str(e) + " title")
+        #print(str(e) + " title")
         title = "Не указано"
     return title
 
@@ -94,7 +99,7 @@ def get_seller_type(soup):
 
 def get_photos(url):
     try:
-        driver = webdriver.Chrome(executable_path=chrome_driver)
+        driver = webdriver.Chrome()
         driver.get(url)
 
         images = []
@@ -140,7 +145,10 @@ def get_date(soup):
 
 
 def driver_get_phone_and_images(url):
-    driver = webdriver.Chrome(executable_path=chrome_driver)
+    vdisplay = Xvfb()
+    vdisplay.start()
+    driver = webdriver.Chrome(options=options)
+    driver.set_window_size(1920, 1080)
     driver.get(url)
 
     try:
@@ -170,6 +178,7 @@ def driver_get_phone_and_images(url):
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " cian get_phone\n")
     driver.quit()
+    vdisplay.stop()
     return images, phone
 
 
@@ -361,7 +370,7 @@ def crawl_page(html, category, sell_type):
     for offer in offers:
         try:
             url = offer.find("a").get("href")
-            print(url)
+            #print(url)
             data = []
             if category == "apartments":
                 data = get_apartment_data(get_html(url), url)
@@ -377,13 +386,14 @@ def crawl_page(html, category, sell_type):
                     file.write("%s--%s--%s\n" % (data[0], data[2], url))
 
             if data[-2] == "too old":
-                print("Парсинг завершен")
+                print("Парсинг завершен cian")
                 return True
 
             data.insert(1, sell_type)
             db.insert_data("cian_%s" % category, data)
-            print(*data, sep="\n")
-            print("--------------------------------------")
+            print("parsed page cian")
+            #print(*data, sep="\n")
+            #print("--------------------------------------")
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
@@ -422,11 +432,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # defining chrome options for selenium
-    # options = Options()
-    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    # options.add_argument('--disable-gpu')
-    # options.add_argument('--headless')
-    #
-
     main()

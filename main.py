@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import avito_parsing
 import irr_parsing
 import kvadrat64_parsing
@@ -17,7 +19,9 @@ if os.path.isfile("total_data.txt"):
 if os.path.isfile("logs.txt"):
     os.remove("logs.txt")
 
-if __name__ == '__main__':
+
+def main():
+    print("Job started")
     t1 = Process(target=ya_realty_parsing.main)
     t2 = Process(target=irr_parsing.main)
     t3 = Process(target=youla_parsing.main)
@@ -50,3 +54,14 @@ if __name__ == '__main__':
     for data in total_data:
         if len(total_data[data]) > 1:
             db.insert_data("dublicates", [", ".join(data), "\n".join(total_data[data])])
+
+
+if __name__ == '__main__':
+    import schedule
+    import time
+
+    schedule.every().day.at("15:12").do(main)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)

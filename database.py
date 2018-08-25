@@ -1,11 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import mysql.connector
 from mysql.connector import Error
 
 # using sensitive data placeholders, replace it with passwords
-host = "51.15.116.198"
-database = "real_estate"
-user = "root"
-password = "root_estate"
+host = "host"
+database = "db"
+user = "user"
+password = "pass"
 
 
 class DataBase:

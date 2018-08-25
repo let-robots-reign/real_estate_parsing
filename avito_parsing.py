@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -5,10 +7,9 @@ import random
 from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from xvfbwrapper import Xvfb
 from PIL import Image
 from pytesseract import image_to_string
-import pytesseract
-import os
 import sys
 from database import DataBase
 
@@ -31,9 +32,11 @@ with open("breakpoints/avito.txt", "r", encoding="utf8") as file:
         break_commercial = tuple(breakpoints[3].strip().split("--"))
     except:
         break_commercial = None
-    print(break_apartment, break_cottage, break_land, break_commercial)
+    #print(break_apartment, break_cottage, break_land, break_commercial)
 
-chrome_driver = os.getcwd() + "\\chromedriver.exe"
+#defining chrome options for selenium
+options = Options()
+options.add_argument('--no-sandbox')
 
 db = DataBase()
 db.create_table("avito_apartments")
@@ -173,11 +176,12 @@ def get_description(soup):
 
 def get_seller_phone(url):
     # телефон показывается в виде картинки, используем selenium и pytesseract
-    pytesseract.pytesseract.tesseract_cmd = r"D:\Programs\Tesseract-OCR\tesseract.exe"
-
-    driver = webdriver.Chrome(executable_path=chrome_driver)
-
+    vdisplay = Xvfb()
+    vdisplay.start()
+    driver = webdriver.Chrome(options=options)
+    driver.set_window_size(1920, 1080)
     driver.get(url)
+
     try:
         button = driver.find_element_by_xpath('//a[@class="button item-phone-button js-item-phone-button '
                                               'button-origin button-origin-blue button-origin_full-width '
@@ -192,7 +196,7 @@ def get_seller_phone(url):
         cropped = Image.open("phone_number.png")
         x, y = image.location["x"], image.location["y"]
         width, height = image.size["width"], image.size["height"]
-        cropped.crop((x - 50, y, x - 50 + width, y + height)).save("phone.gif")
+        cropped.crop((x, y, x + width, y + height)).save("phone.gif")
 
         phone = Image.open("phone.gif")
         phone_text = image_to_string(phone)
@@ -202,6 +206,7 @@ def get_seller_phone(url):
         phone_text = "Не указано"
 
     driver.quit()
+    vdisplay.stop()
 
     return phone_text
 
@@ -422,13 +427,13 @@ def crawl_page(first_offer, html, category):
                 first_offer = False
 
             if offer.find("div", class_="js-item-date c-2").text.strip() == "2 дня назад":
-                print("Парсинг завершен")
+                print("Парсинг завершен avito")
                 return True
 
             key_info = (offer.find("a", class_="item-description-title-link").get("title"), offer.find("span", {"class": "price", "itemprop": "price"}).get("content"))
 
             if any(x == key_info for x in [break_apartment, break_cottage, break_land, break_commercial]):
-                print("Парсинг завершен")
+                print("Парсинг завершен avito")
                 return True
 
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
@@ -453,12 +458,13 @@ def crawl_page(first_offer, html, category):
                     file.write("%s--%s--%s\n" % (data[0], data[3], url))
 
             db.insert_data("avito_%s" % category, data)
-            print(data)
+            print("parsed page avito")
+            #print(data)
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
                 file.write(str(e) + " avito crawl_page\n")
-                print(str(e) + " avito crawl_page")
+                #print(str(e) + " avito crawl_page")
 
         time.sleep(random.uniform(5, 8))
 
@@ -480,13 +486,6 @@ def parse(category_url, base_url, category_name):
 
 
 def main():
-    # defining chrome options for selenium
-    # options = Options()
-    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    # options.add_argument('--disable-gpu')
-    # options.add_argument('--headless')
-    #
-
     url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
     parse(url_apartments, base_url, "apartments")

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -5,8 +7,8 @@ import random
 from fake_useragent import UserAgent
 import datetime
 from selenium import webdriver
+from xvfbwrapper import Xvfb
 from selenium.webdriver.chrome.options import Options
-import os
 from database import DataBase
 
 # на каких записях останавливаться
@@ -37,7 +39,9 @@ with open("breakpoints/ya.txt", "r", encoding="utf8") as file:
     except:
         break_commercial_rent = None
 
-chrome_driver = os.getcwd() + "\\chromedriver.exe"
+# defining chrome options for selenium
+options = Options()
+options.add_argument("--no-sandbox")
 
 db = DataBase()
 db.create_table("ya_apartments")
@@ -194,13 +198,18 @@ def get_date(soup):
 def get_seller_phone(url):
     phone = "Не указано"
     try:
-        driver = webdriver.Chrome(executable_path=chrome_driver)
+        vdisplay = Xvfb()
+        vdisplay.start()
+        driver = webdriver.Chrome(options=options)
+        driver.set_window_size(1920, 1080)
         driver.get(url)
+
         button = driver.find_element_by_xpath("/html/body/div[1]/div[2]/div/div[2]/div[2]/div[2]/div/div[1]/div[3]/div[1]/span/button")
         button.click()
         time.sleep(3)
         phone = driver.find_element_by_xpath('//div[@class="helpful-info__contact-phones-string"]').text
         driver.quit()
+        vdisplay.stop()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " ya get_seller_phone\n")
@@ -358,10 +367,11 @@ def crawl_page(first_offer, html, category, sell_type):
         try:
             date = get_date(soup)
             if date == "too old":
-                print("Парсинг завершен")
+                print("Парсинг завершен ya")
                 return True
 
             url = "https://realty.yandex.ru" + offer.find("a", class_="OffersSerpItem__link").get("href")
+            #print(url)
 
             data = []
             if category == "apartments":
@@ -389,18 +399,21 @@ def crawl_page(first_offer, html, category, sell_type):
 
             if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottage_sell,
                                            break_cottage_rent, break_commercial_sell, break_commercial_rent]):
-                print("Парсинг завершен")
+                print("Парсинг завершен ya")
                 return True
 
             data.append(date)
             data.insert(1, sell_type)
             db.insert_data("ya_%s" % category, data)
-            print(*data, sep="\n")
-            print("--------------------------------------")
+            print("parsed page ya")
+            #print(*data, sep="\n")
+            #print("--------------------------------------")
 
         except Exception as e:
-            print(e)
-            print("Ошибка в crawl_page")
+            with open("logs.txt", "a", encoding="utf8") as file:
+                file.write(str(e) + " ya crawl_page\n")
+            #print(e)
+            #print("Ошибка в crawl_page")
 
         k += 1
         if k % 5 == 0:  # после каждого пятого запроса, делаем паузу побольше
@@ -422,13 +435,6 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
-    # defining chrome options for selenium
-    # options = Options()
-    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    # options.add_argument('--disable-gpu')
-    # options.add_argument('--headless')
-    #
-
     url_apartments_sell = "https://realty.yandex.ru/saratovskaya_oblast/kupit/kvartira/?sort=DATE_DESC&page=0"
     parse(url_apartments_sell, "apartments", "Продажа")
 

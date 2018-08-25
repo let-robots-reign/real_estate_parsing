@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -5,8 +7,8 @@ import random
 from fake_useragent import UserAgent
 import datetime
 from selenium import webdriver
+from xvfbwrapper import Xvfb
 from selenium.webdriver.chrome.options import Options
-import os
 from database import DataBase
 
 
@@ -50,7 +52,9 @@ with open("breakpoints/kvadrat.txt", "r", encoding="utf8") as file:
     except:
         break_region_land_sell = None
 
-chrome_driver = os.getcwd() + "\\chromedriver.exe"
+# defining chrome options for selenium
+options = Options()
+options.add_argument("--no-sandbox")
 
 db = DataBase()
 db.create_table("kvardat_apartments")
@@ -214,10 +218,12 @@ def get_seller_phone(url, soup):
             phone = "Не указано"
 
         if not found:
-
-            driver = webdriver.Chrome(executable_path=chrome_driver)
-
+            vdisplay = Xvfb()
+            vdisplay.start()
+            driver = webdriver.Chrome(options=options)
+            driver.set_window_size(1920, 1080)
             driver.get(url)
+
             button = driver.find_element_by_xpath('//span[@class="showphone"]')
             button.click()
             time.sleep(3)
@@ -226,6 +232,7 @@ def get_seller_phone(url, soup):
                 if "Контактный телефон" in info:
                     phone = info.split(":")[1].strip()
             driver.quit()
+            vdisplay.stop()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " kvadrat get_seller_phone\n")
@@ -477,6 +484,7 @@ def crawl_page(first_offer, html, category, sell_type):
     for offer in offers:
         try:
             url = "http://kvadrat64.ru/" + offer.get("href")
+            #print(url)
             data = []
             if category == "apartments":
                 data = get_apartment_data(get_html(url), url)
@@ -515,7 +523,7 @@ def crawl_page(first_offer, html, category, sell_type):
             if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottage_sell,
                                            break_cottage_rent, break_commercial_sell, break_commercial_rent,
                                            break_dacha_sell, break_saratov_land_sell, break_region_land_sell]):
-                print("Парсинг завершен")
+                print("Парсинг завершен kvadrat")
                 return True
 
             if category == "apartments" or category == "cottages":
@@ -529,18 +537,19 @@ def crawl_page(first_offer, html, category, sell_type):
 
             if data[-1] != "Не указано" and data[-1] < datetime.datetime.today() - datetime.timedelta(days=1):
                 # сраниваем форматы datetime, чтобы знать, когда закончить парсинг
-                print("Парсинг завершен")
+                print("Парсинг завершен kvadrat")
                 return True
             else:
                 # переводим в строковый формат
                 data[-1] = str(data[-1]).split()[0]
 
             db.insert_data("kvadrat_%s" % category, data)
-            print(data)
+            #print(data)
+            print("parsed page kvadrat")
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
-                file.write(str(e) + " kvadrat get_crawl_page\n")
+                file.write(str(e) + " kvadrat crawl_page\n")
 
         time.sleep(random.uniform(5, 8))
 
@@ -566,12 +575,6 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
-    # defining chrome options for selenium
-    # options = Options()
-    # options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    # options.add_argument('--disable-gpu')
-    # options.add_argument('--headless')
-
     url_apartments_sell = "http://kvadrat64.ru/sellflatbank-50-1.html"
     parse(url_apartments_sell, "apartments", "Продажа")
 

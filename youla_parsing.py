@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -5,14 +7,17 @@ import random
 from fake_useragent import UserAgent
 import datetime
 from selenium import webdriver
+from xvfbwrapper import Xvfb
 from selenium.webdriver.chrome.options import Options
-import os
 from database import DataBase
 
-chrome_driver = os.getcwd() + "\\chromedriver.exe"
 db = DataBase()
 db.create_table("youla_apartments")
 db.create_table("youla_cottages")
+
+# defining chrome options for selenium
+options = Options()
+options.add_argument("--no-sandbox")
 
 
 def get_html(url):
@@ -204,7 +209,9 @@ def get_cottage_params(driver):
 
 
 def get_apartment_data(url):
-    driver = webdriver.Chrome(executable_path=chrome_driver)
+    vdisplay = Xvfb()
+    vdisplay.start()
+    driver = webdriver.Chrome(options=options)
     driver.set_window_size(1920, 1080)
     driver.get(url)
 
@@ -223,13 +230,16 @@ def get_apartment_data(url):
     phone = get_seller_phone(driver)
 
     driver.quit()
+    vdisplay.stop()
 
     return [address, price, selling_type, material, lift, year, rooms_number, floor, total_floors, total_area,
             kitchen_area, repair, seller_type, images, description, seller_name, phone]
 
 
 def get_cottage_data(url, category):
-    driver = webdriver.Chrome(executable_path=chrome_driver)
+    vdisplay = Xvfb()
+    vdisplay.start()
+    driver = webdriver.Chrome(options=options)
     driver.set_window_size(1920, 1080)
     driver.get(url)
 
@@ -245,6 +255,9 @@ def get_cottage_data(url, category):
     images = get_photos(driver)
     description = get_description(driver)
     phone = get_seller_phone(driver)
+
+    driver.quit()
+    vdisplay.stop()
 
     if category == "Участок":
         material, total_floors = "Участок", "Участок"
@@ -265,10 +278,11 @@ def crawl_page(html):
             category = get_category(html, k)
             date = get_date(html, k)
             if date == "too old" and len(offer.get("class")) == 1:
+                print("Парсинг завершен youla")
                 return True
             k += 1
             url = "https://youla.ru" + offer.find("a").get("href")
-            print(url)
+            #print(url)
             if category is None or "saratov" not in url:
                 time.sleep(random.uniform(5, 8))
                 continue
@@ -285,12 +299,15 @@ def crawl_page(html):
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
 
-            print(*data, sep="\n")
-            print("--------------------------------------")
+            #print(*data, sep="\n")
+            #print("--------------------------------------")
+            print("parsed page youla")
 
         except Exception as e:
-            print(e)
-            print("Ошибка в crawl_page")
+            with open("logs.txt", "a", encoding="utf8") as file:
+                file.write(str(e) + " youla crawl_page\n")
+            #print(e)
+            #print("Ошибка в crawl_page")
 
         time.sleep(random.uniform(5, 8))
 
@@ -305,16 +322,9 @@ def parse(url):
 
 
 def main():
-    url = "https://youla.ru/all/nedvijimost?attributes[sort_field]=date_published&attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now&page=1"
+    url = "https://youla.ru/saratov/nedvijimost?attributes[sort_field]=date_published&attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now&page=1"
     parse(url)
 
 
 if __name__ == "__main__":
-    # defining chrome options for selenium
-    #options = Options()
-    #options.add_argument("--window-size=1920x1080")
-    #options.add_experimental_option("excludeSwitches", ["ignore-certificate-errors"])
-    #options.add_argument('--disable-gpu')
-    #options.add_argument('--headless')
-
     main()

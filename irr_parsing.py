@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -363,11 +365,11 @@ def crawl_page(first_offer, html, category, sell_type):
         try:
             date = offer.find("span", class_="listing__itemDate").find("div", class_="updateProduct").text.strip()
             if date == date_break_point:
-                print("Парсинг завершен")
+                print("Парсинг завершен irr")
                 return True
 
             url = offer.find("div", class_="listing__itemTitleWrapper").find("a", class_="listing__itemTitle").get("href")
-            print(url)
+            #print(url)
 
             data = []
             if category == "apartments":
@@ -395,12 +397,13 @@ def crawl_page(first_offer, html, category, sell_type):
 
             if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_commercial_sell,
                                            break_commercial_rent, break_cottage_sell, break_cottage_rent]):
-                print("Парсинг завершен")
+                print("Парсинг завершен irr")
                 return True
 
             data.insert(1, sell_type)
             db.insert_data("irr_%s" % category, data)
-            print(data)
+            print("parsed page irr")
+            #print(data)
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:

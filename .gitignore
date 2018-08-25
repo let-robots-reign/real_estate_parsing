@@ -109,5 +109,5 @@ chromedriver.exe
 phone.gif
 phone_number.png
 logs.txt
-breakpoints/
+# breakpoints/
 total_data.txt
