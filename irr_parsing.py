@@ -361,6 +361,9 @@ def get_cottage_data(html):
 def crawl_page(first_offer, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
     offers = soup.find("div", class_="listing js-productGrid ").find_all("div", class_="listing__item")
+    if offers is None or not offers:
+        print("Парсинг завершен irr")
+        return True
     for offer in offers:
         try:
             date = offer.find("span", class_="listing__itemDate").find("div", class_="updateProduct").text.strip()

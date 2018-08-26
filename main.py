@@ -42,6 +42,8 @@ def main():
     t5.join()
     t6.join()
 
+    print("Job finished")
+
     total_data = {}
 
     with open("total_data.txt", "r", encoding="utf8") as file:
@@ -60,7 +62,7 @@ if __name__ == '__main__':
     import schedule
     import time
 
-    schedule.every().day.at("15:12").do(main)
+    schedule.every().day.at("17:10").do(main)
 
     while True:
         schedule.run_pending()
