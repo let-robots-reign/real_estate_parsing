@@ -170,7 +170,6 @@ def driver_get_phone_and_images(url):
     try:
         button = [x for x in driver.find_elements_by_tag_name("button") if x.text.strip() == "Показать телефон"][-1]
         button.click()
-        time.sleep(3)
         phone = "\n".join([x.text.strip() for x in driver.find_elements_by_tag_name("a") if x.get_attribute("class") is not None
                            and x.get_attribute("class").startswith("phone--")])
     except Exception as e:
@@ -400,13 +399,11 @@ def crawl_page(html, category, sell_type):
             with open("logs.txt", "a", encoding="utf8") as file:
                 file.write(str(e) + " cian crawl_page\n")
 
-        time.sleep(random.uniform(5, 8))
-
 
 def parse(category_url, category_name, sell_type):
     completed = False
+    page = 1
     while not completed:
-        page = 1
         url_gen = category_url[:category_url.rfind("=") + 1] + str(page)
         completed = crawl_page(get_html(url_gen), category_name, sell_type)
         page += 1

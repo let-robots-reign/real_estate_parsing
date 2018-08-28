@@ -310,30 +310,19 @@ def crawl_page(html):
             #print(e)
             #print("Ошибка в crawl_page")
 
-        time.sleep(random.uniform(5, 8))
+
+def parse(url):
+    completed = False
+    page = 1
+    while not completed:
+        url_gen = url[:url.rfind("=") + 1] + str(page)
+        completed = crawl_page(get_html(url_gen))
+        page += 1
 
 
 def main():
-    url_apartments_sell = "https://youla.ru/saratov/nedvijimost/prodaja-kvartiri?attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now"
-    crawl_page(get_html(url_apartments_sell))
-
-    url_apartments_rent_long = "https://youla.ru/saratov/nedvijimost/arenda-kvartiri?attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now"
-    crawl_page(get_html(url_apartments_rent_long))
-
-    url_apartments_rent_short = "https://youla.ru/saratov/nedvijimost/arenda-kvartiri-posutochno?attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now"
-    crawl_page(get_html(url_apartments_rent_short))
-
-    url_cottages_sell = "https://youla.ru/saratov/nedvijimost/prodaja-doma?attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now"
-    crawl_page(get_html(url_cottages_sell))
-
-    url_lands_sell = "https://youla.ru/saratov/nedvijimost/prodaja-uchastka?attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now"
-    crawl_page(get_html(url_lands_sell))
-
-    url_cottages_rent_long = "https://youla.ru/saratov/nedvijimost/arenda-doma?attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now"
-    crawl_page(get_html(url_cottages_rent_long))
-
-    url_cottages_rent_short = "https://youla.ru/saratov/nedvijimost/arenda-doma-posutochno?attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now"
-    crawl_page(get_html(url_cottages_rent_short))
+    url = "https://youla.ru/saratov/nedvijimost?attributes[sort_field]=date_published&attributes[term_of_placement][from]=-1%20day&attributes[term_of_placement][to]=now&page=1"
+    parse(url)
 
 
 if __name__ == "__main__":

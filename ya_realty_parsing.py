@@ -206,7 +206,7 @@ def get_seller_phone(url):
 
         button = driver.find_element_by_xpath("/html/body/div[1]/div[2]/div/div[2]/div[2]/div[2]/div/div[1]/div[3]/div[1]/span/button")
         button.click()
-        time.sleep(3)
+        time.sleep(2)
         phone = driver.find_element_by_xpath('//div[@class="helpful-info__contact-phones-string"]').text
         driver.quit()
         vdisplay.stop()
@@ -418,17 +418,17 @@ def crawl_page(first_offer, html, category, sell_type):
 
         k += 1
         if k % 5 == 0:  # после каждого пятого запроса, делаем паузу побольше
-            time.sleep(120)
+            time.sleep(100)
         else:
-            time.sleep(random.uniform(15, 20))
+            time.sleep(random.uniform(10, 15))
 
 
 def parse(category_url, category_name, sell_type):
     completed = False
+    page = 0
     while not completed:
-        page = 1
         url_gen = category_url[:category_url.rfind("=") + 1] + str(page)
-        if page == 1:
+        if page == 0:
             completed = crawl_page(True, get_html(url_gen), category_name, sell_type)
         else:
             completed = crawl_page(False, get_html(url_gen), category_name, sell_type)
