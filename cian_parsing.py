@@ -390,8 +390,13 @@ def crawl_page(html, category, sell_type):
                 return True
 
             data.insert(1, sell_type)
-            db.insert_data("cian_%s" % category, data)
-            print("parsed page cian")
+            db.cursor.execute("SELECT * FROM cian_{} WHERE Адрес = %s AND Тип_сделки = %s AND Цена = %s".format(category),
+                              (data[0], data[1], data[2]))
+            if db.cursor.fetchall():
+                db.insert_data("cian_%s" % category, data)
+                print("parsed page cian")
+            else:
+                print("cian not unique")
             #print(*data, sep="\n")
             #print("--------------------------------------")
 
@@ -410,12 +415,6 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
-    url_apartments_sell = "https://saratov.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&region=4609&room1=1&room2=1&room3=1&room4=1&room5=1&room6=1&room7=1&room9=1&totime=86400&page=1"
-    parse(url_apartments_sell, "apartments", "Продажа")
-
-    url_apartments_rent = "https://saratov.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&region=4609&room1=1&room2=1&room3=1&room4=1&room5=1&room6=1&room7=1&room9=1&totime=86400&page=1"
-    parse(url_apartments_rent, "apartments", "Аренда")
-
     url_cottages_sell = "https://saratov.cian.ru/cat.php?deal_type=sale&engine_version=2&object_type%5B0%5D=1&offer_type=suburban&region=4609&totime=86400&page=1"
     parse(url_cottages_sell, "cottages", "Продажа")
 
@@ -427,6 +426,12 @@ def main():
 
     url_commercials_rent = "https://saratov.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=offices&office_type%5B0%5D=1&office_type%5B10%5D=12&office_type%5B1%5D=2&office_type%5B2%5D=3&office_type%5B3%5D=4&office_type%5B4%5D=5&office_type%5B5%5D=6&office_type%5B6%5D=7&office_type%5B7%5D=9&office_type%5B8%5D=10&office_type%5B9%5D=11&region=4609&totime=86400&page=1"
     parse(url_commercials_rent, "commercials", "Аренда")
+
+    url_apartments_sell = "https://saratov.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&region=4609&room1=1&room2=1&room3=1&room4=1&room5=1&room6=1&room7=1&room9=1&totime=86400&page=1"
+    parse(url_apartments_sell, "apartments", "Продажа")
+
+    url_apartments_rent = "https://saratov.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&region=4609&room1=1&room2=1&room3=1&room4=1&room5=1&room6=1&room7=1&room9=1&totime=86400&page=1"
+    parse(url_apartments_rent, "apartments", "Аренда")
 
 
 if __name__ == "__main__":

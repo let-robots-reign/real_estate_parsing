@@ -32,10 +32,11 @@ def main():
             for data in total_data:
                 if len(total_data[data]) > 1:
                     db.insert_data("dublicates", [", ".join(data), "\n".join(total_data[data])])
-
-            os.remove("total_data.txt")
     except Exception as e:
         print(e)
+
+    if os.path.isfile("total_data.txt"):
+        os.remove("total_data.txt")
 
     t1 = Process(target=ya_realty_parsing.main)
     t2 = Process(target=irr_parsing.main)
