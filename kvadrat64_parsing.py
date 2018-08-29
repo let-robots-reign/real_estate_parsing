@@ -480,7 +480,10 @@ def get_lands_region_data(html, url):
 
 def crawl_page(first_offer, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
-    offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
+    try:
+        offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
+    except:
+        offers = []
     if offers is None or not offers:
         print("Парсинг завершен kvadrat")
         return True

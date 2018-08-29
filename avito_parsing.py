@@ -415,7 +415,10 @@ def get_commercial_data(url, html):
 
 def crawl_page(first_offer, html, category):
     soup = BeautifulSoup(html, "lxml")
-    offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
+    try:
+        offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
+    except:
+        offers = []
     if offers is None or not offers:
         print("Парсинг завершен avito")
         return True

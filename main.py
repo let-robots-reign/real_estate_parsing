@@ -65,7 +65,7 @@ if __name__ == '__main__':
     import schedule
     import time
 
-    schedule.every().day.at("16:25").do(main)
+    schedule.every().day.at("08:35").do(main)
 
     while True:
         schedule.run_pending()

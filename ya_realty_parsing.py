@@ -359,7 +359,10 @@ def get_commercial_data(html, url):
 def crawl_page(first_offer, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
-    offers = soup.find("ol", class_="OffersSerp__list").find_all("li", class_="OffersSerp__list-item_type_offer")
+    try:
+        offers = soup.find("ol", class_="OffersSerp__list").find_all("li", class_="OffersSerp__list-item_type_offer")
+    except:
+        offers = []
     if offers is None or not offers:
         print("Парсинг завершен ya")
         return True

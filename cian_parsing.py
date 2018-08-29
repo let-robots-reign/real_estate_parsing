@@ -359,11 +359,18 @@ def get_commercial_data(html, url):
             description, date, phone]
 
 
-def crawl_page(html, category, sell_type):
+def crawl_page(page, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
+    if page != 1 and [x for x in soup.find_all("li")
+                      if len(x.get("class")) == 1 and "list-item--active" in x.get("class")[0]][0].text.strip() == "1":
+        print("Парсинг завершен cian")
+        return True
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
-    offers = [x for x in soup.find("div", id="frontend-serp").find("div").find_all("div")
-              if x.get("class") is not None and "offer-container" in x.get("class")[0]]
+    try:
+        offers = [x for x in soup.find("div", id="frontend-serp").find("div").find_all("div")
+                  if x.get("class") is not None and "offer-container" in x.get("class")[0]]
+    except:
+        offers = []
     if offers is None or not offers:
         print("Парсинг завершен cian")
         return True
@@ -410,7 +417,7 @@ def parse(category_url, category_name, sell_type):
     page = 1
     while not completed:
         url_gen = category_url[:category_url.rfind("=") + 1] + str(page)
-        completed = crawl_page(get_html(url_gen), category_name, sell_type)
+        completed = crawl_page(page, get_html(url_gen), category_name, sell_type)
         page += 1
 
 
