@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 import mysql.connector
 from mysql.connector import Error
 
 # using sensitive data placeholders, replace it with passwords
-host = "host"
+host = "host
 database = "db"
 user = "user"
 password = "pass"

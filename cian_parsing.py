@@ -361,8 +361,8 @@ def get_commercial_data(html, url):
 
 def crawl_page(page, html, category, sell_type):
     soup = BeautifulSoup(html, "lxml")
-    if page != 1 and [x for x in soup.find_all("li")
-                      if len(x.get("class")) == 1 and "list-item--active" in x.get("class")[0]][0].text.strip() == "1":
+    if page != 1 and "".join([x.text.strip() for x in soup.find_all("li")
+                              if len(x.get("class")) == 2 and "list-item--active" in "".join(x.get("class"))]) == "1":
         print("Парсинг завершен cian")
         return True
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
@@ -399,7 +399,7 @@ def crawl_page(page, html, category, sell_type):
             data.insert(1, sell_type)
             db.cursor.execute("SELECT * FROM cian_{} WHERE Адрес = %s AND Тип_сделки = %s AND Цена = %s".format(category),
                               (data[0], data[1], data[2]))
-            if db.cursor.fetchall():
+            if not db.cursor.fetchall():
                 db.insert_data("cian_%s" % category, data)
                 print("parsed page cian")
             else:
