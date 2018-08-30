@@ -30,8 +30,9 @@ def main():
                     total_data[params] = list(set(total_data.get(params, []) + [url]))
 
             for data in total_data:
-                if len(total_data[data]) > 1:
-                    db.insert_data("dublicates", [", ".join(data), "\n".join(total_data[data])])
+                if ", ".join(data) != "Не указано, Не указано, Не указано":  # avoid writing dummy records
+                    if len(total_data[data]) > 1:
+                        db.insert_data("dublicates", [", ".join(data), "\n".join(total_data[data])])
     except Exception as e:
         print(e)
 
