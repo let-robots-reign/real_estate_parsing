@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
 
-import avito_parsing
-import irr_parsing
-import kvadrat64_parsing
-import ya_realty_parsing
-import cian_parsing
-import youla_parsing
-from multiprocessing import Process
-import os
-from database import DataBase
-
-db = DataBase()
-db.create_table("dublicates")
-
-if os.path.isfile("logs.txt"):
-    os.remove("logs.txt")
-
 
 def main():
+    import avito_parsing
+    import irr_parsing
+    import kvadrat64_parsing
+    import ya_realty_parsing
+    import cian_parsing
+    import youla_parsing
+    from multiprocessing import Process
+    import os
+    from database import DataBase
+
     print("Job started")
+
+    db = DataBase()
+    db.create_table("dublicates")
+
+    if os.path.isfile("logs.txt"):
+        os.remove("logs.txt")
+
     total_data = {}
     try:
         if os.path.isfile("total_data.txt"):

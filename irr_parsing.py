@@ -407,7 +407,8 @@ def crawl_page(first_offer, html, category, sell_type):
                 return True
 
             data.insert(1, sell_type)
-            db.insert_data("irr_%s" % category, data)
+            if data[0] != "Не указано":
+                db.insert_data("irr_%s" % category, data)
             print("parsed page irr")
             #print(data)
 

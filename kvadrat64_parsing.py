@@ -549,7 +549,8 @@ def crawl_page(first_offer, html, category, sell_type):
                 # переводим в строковый формат
                 data[-1] = str(data[-1]).split()[0]
 
-            db.insert_data("kvadrat_%s" % category, data)
+            if data[0] != "Не указано":
+                db.insert_data("kvadrat_%s" % category, data)
             #print(data)
             print("parsed page kvadrat")
 

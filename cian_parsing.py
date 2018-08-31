@@ -400,7 +400,8 @@ def crawl_page(page, html, category, sell_type):
             db.cursor.execute("SELECT * FROM cian_{} WHERE Адрес = %s AND Тип_сделки = %s AND Цена = %s".format(category),
                               (data[0], data[1], data[2]))
             if not db.cursor.fetchall():
-                db.insert_data("cian_%s" % category, data)
+                if data[0] != "Не указано":
+                    db.insert_data("cian_%s" % category, data)
                 print("parsed page cian")
             else:
                 print("cian not unique")

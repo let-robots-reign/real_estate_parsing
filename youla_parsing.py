@@ -290,13 +290,15 @@ def crawl_page(html):
             data = []
             if category == "Квартира":
                 data = get_apartment_data(url)
-                db.insert_data("youla_apartments", data)
+                if data[0] != "Не указано":
+                    db.insert_data("youla_apartments", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s\n" % (data[0], data[6], data[9], url))
             elif any(x in category for x in ["Дом", "Коттедж", "Таунхаус", "Дача", "Участок"]):
                 data = get_cottage_data(url, category)
                 data.append(date)
-                db.insert_data("youla_cottages", data)
+                if data[0] != "Не указано":
+                    db.insert_data("youla_cottages", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
 
