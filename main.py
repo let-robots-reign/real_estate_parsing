@@ -10,9 +10,10 @@ def main():
     import youla_parsing
     from multiprocessing import Process
     import os
+    import datetime
     from database import DataBase
 
-    print("Job started")
+    print("Job started", datetime.datetime.today())
 
     db = DataBase()
     db.create_table("dublicates")
@@ -31,7 +32,7 @@ def main():
                     total_data[params] = list(set(total_data.get(params, []) + [url]))
 
             for data in total_data:
-                if ", ".join(data) != "Не указано, Не указано, Не указано":  # avoid writing dummy records
+                if all(x != "Не указано" for x in data):  # avoid writing dummy records
                     if len(total_data[data]) > 1:
                         db.insert_data("dublicates", [", ".join(data), "\n".join(total_data[data])])
     except Exception as e:
@@ -60,14 +61,14 @@ def main():
     t5.join()
     t6.join()
 
-    print("Job finished")
+    print("Job finished", datetime.datetime.today())
 
 
 if __name__ == '__main__':
     import schedule
     import time
 
-    schedule.every().day.at("11:00").do(main)
+    schedule.every().day.at("14:50").do(main)
 
     while True:
         schedule.run_pending()

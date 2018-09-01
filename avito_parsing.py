@@ -463,9 +463,14 @@ def crawl_page(first_offer, html, category):
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s\n" % (data[0], data[3], url))
 
-            if data[0] != "Не указано":
-                db.insert_data("avito_%s" % category, data)
-            print("parsed page avito")
+            db.cursor.execute("SELECT * FROM avito_{} WHERE Адрес = %s AND Тип_сделки = %s AND Цена = %s".format(category),
+                             (data[0], data[1], data[2]))
+            if not db.cursor.fetchall():
+                if data[0] != "Не указано" and data[1] != "Не указано" and data[2] != "Не указано":
+                    db.insert_data("avito_%s" % category, data)
+                print("parsed page avito")
+            else:
+                print("avito not unique")
             #print(data)
 
         except Exception as e:

@@ -400,7 +400,7 @@ def crawl_page(page, html, category, sell_type):
             db.cursor.execute("SELECT * FROM cian_{} WHERE Адрес = %s AND Тип_сделки = %s AND Цена = %s".format(category),
                               (data[0], data[1], data[2]))
             if not db.cursor.fetchall():
-                if data[0] != "Не указано":
+                if data[0] != "Не указано" and data[1] != "Не указано" and data[2] != "Не указано":
                     db.insert_data("cian_%s" % category, data)
                 print("parsed page cian")
             else:
@@ -411,6 +411,8 @@ def crawl_page(page, html, category, sell_type):
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
                 file.write(str(e) + " cian crawl_page\n")
+
+        time.sleep(random.uniform(5, 8))
 
 
 def parse(category_url, category_name, sell_type):
