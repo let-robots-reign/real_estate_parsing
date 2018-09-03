@@ -61,6 +61,7 @@ def main():
     t5.join()
     t6.join()
 
+    db.close()
     print("Job finished", datetime.datetime.today())
 
 

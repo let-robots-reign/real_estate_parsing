@@ -18,6 +18,10 @@ class DataBase:
         except Error as error:
             print("Error while connecting to database", error)
 
+    def close(self):
+        self.cursor.close()
+        self.conn.close()
+
     def create_table(self, category):
         if category == "avito_apartments":
             self.cursor.execute("CREATE TABLE IF NOT EXISTS avito_apartments "
