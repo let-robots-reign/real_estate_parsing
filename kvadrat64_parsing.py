@@ -57,12 +57,7 @@ options = Options()
 options.add_argument("--no-sandbox")
 
 db = DataBase()
-db.create_table("kvardat_apartments")
-db.create_table("kvadrat_cottages")
-db.create_table("kvadrat_commercials")
-db.create_table("kvadrat_dachas")
-db.create_table("kvadrat_lands_saratov")
-db.create_table("kvadrat_lands_region")
+visited_urls = []
 
 
 def transform_date(date_str):
@@ -139,12 +134,16 @@ def get_selling_type(soup):
     try:
         # если продажа, ищем тип продажи
         selling_type = "; ".join([x.text.strip() for x in soup.find("td", class_="tddec2").find_all("span", class_="d")])
+        if not selling_type:
+            selling_type = "Не продажа"
         # если аренда - срок аренды
         rent_info = [x.text.strip() for x in soup.find_all("td", class_="tddec2")[-2].find_all("span", class_="d")]
         for info in rent_info:
             if "аренда" in info:
                 rent_info = info
                 break
+        if not rent_info:
+            rent_info = "Не аренда"
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " kvadrat get_selling_type\n")
@@ -200,6 +199,16 @@ def get_date(soup):
     return date
 
 
+def get_seller_name(soup):
+    try:
+        name = soup.find_all("td", class_="tddec2")[-1].find("span").text.strip()
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " kvadrat get_seller_name\n")
+        name = "Не указано"
+    return name
+
+
 def get_seller_phone(url, soup):
     phone = "Не указано"
     # телефон появляется динамически, используем selenium
@@ -241,7 +250,7 @@ def get_seller_phone(url, soup):
 
 
 def get_apartment_params(soup):
-    block_type, total_area, total_floors, material = ["Не указано"] * 4
+    block_type, total_area, kitchen_area, living_area, floor, total_floors, material = ["Не указано"] * 7
     try:
         ###
         # из-за кривой структуры сайта, формируем все сами в удобный формат
@@ -255,8 +264,13 @@ def get_apartment_params(soup):
         for param in params:
             if "Площадь общая" in param:
                 total_area = param.split(":")[1].split("м²")[0].strip() + " м2"
+            elif "Кухня" in param:
+                kitchen_area = param.split(":")[1].split("м²")[0].strip() + " м2"
+            elif "Жилая" in param:
+                living_area = param.split(":")[1].split("м²")[0].strip() + " м2"
             elif "этажей в доме" in param:
                 total_floors = param.split(":")[1].split("/")[1]
+                floor = param.split(":")[1].split("/")[0].split()[1]
             elif "cтроение" in param:
                 material = param.split(":")[1].strip()
             elif "Застройщик" in param or "Дата сдачи" in param or "Стадия строительства" in param:
@@ -270,11 +284,11 @@ def get_apartment_params(soup):
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " kvadrat get_apartment_params\n")
-    return block_type, total_area, total_floors, material
+    return block_type, total_area, kitchen_area, living_area, floor, total_floors, material
 
 
 def get_cottage_params(soup):
-    total_area, material = ["Не указано"] * 2
+    total_area, material, comforts, total_floors, land_area = ["Не указано"] * 5
     try:
         ###
         # из-за кривой структуры сайта, формируем все сами в удобный формат
@@ -288,14 +302,20 @@ def get_cottage_params(soup):
                 total_area = param.split(":")[1].split("м²")[0].strip() + " м2"
             elif "cтроение" in param:
                 material = param.split(":")[1].strip()
+            elif "Площадь участка" in param:
+                land_area = param.split(":")[1].strip()
+            elif "Этажей" in param:
+                total_floors = param.split(":")[1].strip()
+            elif "Коммуникации" in param:
+                comforts = param.split(":")[1].strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " kvadrat get_cottage_params\n")
-    return total_area, material
+    return total_area, material, comforts, total_floors, land_area
 
 
 def get_commercial_params(soup):
-    object_type = "Не указано"
+    object_type, area = ["Не указано"] * 2
     try:
         ###
         # из-за кривой структуры сайта, формируем все сами в удобный формат
@@ -307,11 +327,12 @@ def get_commercial_params(soup):
         for param in params:
             if "Объект" in param:
                 object_type = param.split(":")[1].strip()
-                break
+            elif "площадь" in param:
+                area = param.split(":")[1].strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " kvadrat get_commercial_params\n")
-    return object_type
+    return object_type, area
 
 
 def get_dacha_params(soup):
@@ -335,7 +356,7 @@ def get_dacha_params(soup):
 
 
 def get_land_params(soup):
-    total_area = "Не указано"
+    total_area, land_type = ["Не указано"] * 2
     try:
         ###
         # из-за кривой структуры сайта, формируем все сами в удобный формат
@@ -347,11 +368,12 @@ def get_land_params(soup):
         for param in params:
             if "Площадь участка" in param:
                 total_area = param.split(":")[1].strip()
-                break
+            elif "Тип земли" in params:
+                land_type = param.split(":")[1].strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " kvadrat get_land_params\n")
-    return total_area
+    return total_area, land_type
 
 
 def get_apartment_data(html, url):
@@ -359,23 +381,32 @@ def get_apartment_data(html, url):
 
     title = get_title(soup)
     if "сниму" not in title.lower():
-        address = "".join(title.split(",")[1:]).strip()
+        address = ",".join(title.split(",")[1:]).strip()
         address = address[:address.rfind(" на карте")]
         if "сдам" in address.lower():
             address = " ".join(address.split()[1:])
+        if "(" in address:
+            address = address[:address.rfind("(")]
+
+        city = address.split(",")[-1].strip()
+        district = address.split(",")[-2].strip()
+        block_number = address.split(",")[-3].strip()
+        street = address.split(",")[-4].strip()
+
         rooms_number = title.split(",")[0]
-        block_type, total_area, total_floors, material = get_apartment_params(soup)
+        block_type, total_area, kitchen_area, living_area, floor, total_floors, material = get_apartment_params(soup)
         price = get_price(soup)
-        selling_type, rent_info = get_selling_type(soup)  # чистая продажа/ипотека/без посредников; если аренда, срок аренды
-        if not selling_type:
-            selling_type = "Не продажа"
+        selling_detail, rent_info = get_selling_type(soup)  # чистая продажа/ипотека/без посредников; если аренда, срок аренды
+        if not selling_detail:
+            selling_detail = "Не продажа"
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
 
-        return [address, price, rent_info, block_type, rooms_number, total_area, total_floors, material, selling_type,
-                images, description, phone, date]
+        return [city, district, street, block_number, rent_info, price, block_type,
+                rooms_number, total_area, total_floors, material, selling_detail, images,
+                description, date, phone, kitchen_area, living_area, floor]
     return None
 
 
@@ -384,23 +415,38 @@ def get_cottage_data(html, url):
 
     title = get_title(soup)
     if "сниму" not in title.lower():
-        address = "".join(title.split(",")[1:]).strip()
+        address = ",".join(title.split(",")[1:]).strip()
         address = address[:address.rfind(" на карте")]
+        if "(" in address:
+            address = address[:address.rfind("(")]
+
+        if address == address.upper():
+            city, street, block_number = address.split(",") + (["Не указано"] * (3 - len(address.split(","))))
+            district = "Не указано"
+        else:
+            city = address.split(",")[-1].strip()
+            district = address.split(",")[-2].strip()
+            block_number = address.split(",")[-3].strip()
+            street = address.split(",")[-4].strip()
+
         cottage_type = title.split(",")[0]
         if "сдам" in cottage_type.lower():
             cottage_type = " ".join(cottage_type.split()[1:])
         price = get_price(soup)
-        total_area, material = get_cottage_params(soup)
-        selling_type, rent_info = get_selling_type(soup)  # чистая продажа/ипотека/без посредников; если аренда, срок аренды
-        if not selling_type:
-            selling_type = "Не продажа"
+        total_area, material, comforts, total_floors, land_area = get_cottage_params(soup)
+        selling_detail, rent_info = get_selling_type(soup)  # чистая продажа/ипотека/без посредников; если аренда, срок аренды
+        if not selling_detail:
+            selling_detail = "Не продажа"
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url, soup)
+        seller_name = get_seller_name(soup)
         date = get_date(soup)
+        status = "Не указано"  # нет такой информации
 
-        return [address, price, rent_info, cottage_type, total_area, selling_type, material,
-                images, description, phone, date]
+        return [city, district, street, block_number, rent_info, price, cottage_type,
+                total_area, comforts, selling_detail, images, description, date, phone, material,
+                total_floors, land_area, status, seller_name]
     return None
 
 
@@ -409,79 +455,71 @@ def get_commercial_data(html, url):
 
     title = get_title(soup)
     if "сниму" not in title.lower():
-        address = "".join(title.split(",")[1:]).strip()
+        address = ",".join(title.split(",")[1:]).strip()
         address = address[:address.rfind(" на карте")]
-        object_type = get_commercial_params(soup)
+        if "(" in address:
+            address = address[:address.rfind("(")]
+
+        city = address.split(",")[-1].strip()
+        district = address.split(",")[-2].strip()
+        block_number = address.split(",")[-3].strip()
+        street = address.split(",")[-4].strip()
+
+        object_type, area = get_commercial_params(soup)
         price = get_commercial_price(soup)
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
+        seller_name = get_seller_name(soup)
+        office_class, furniture, entrance = ["Не указано"] * 3
 
-        return [address, price, object_type, images, description, phone, date]
+        return [city, district, street, block_number, price, object_type, office_class,
+            furniture, entrance, area, date, phone, images, description, seller_name]
     return None
 
 
-def get_dacha_data(html, url):
-    soup = BeautifulSoup(html, "lxml")
-
-    title = get_title(soup)
-    if "сниму" not in title.lower():
-        address = "".join(title.split(",")[1:]).strip()
-        address = address[:address.rfind("(")]
-        distance = title[title.rfind("(") + 1:title.rfind(")")]
-        total_area = get_dacha_params(soup)
-        price = get_price(soup)
-        images = get_photos(soup)
-        description = get_description(soup)
-        phone = get_seller_phone(url, soup)
-        date = get_date(soup)
-
-        return [address, price, distance, total_area, images, description, phone, date]
-    return None
-
-
-def get_lands_saratov_data(html, url):
+def get_land_data(html, url):
     soup = BeautifulSoup(html, "lxml")
 
     title = get_title(soup)
     if "сниму" not in title.lower():
         address = ",".join(title.split(",")[1:]).strip()
         address = address[:address.rfind("(")].strip()
-        total_area = get_land_params(soup)
+
+        city = address.split(",")[0]
+        if len(address.split(",")) > 1:
+            district = address.split(",")[1].strip()
+        else:
+            district = "Не указано"
+        street = "Не указано"
+
+        if city.lower() == "саратов":
+            distance = "В черте города"
+        else:
+            distance = title[title.find("(") + 1:title.find(")")]
+
+        area, land_type = get_land_params(soup)
         price = get_price(soup)
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url, soup)
         date = get_date(soup)
+        seller_name = get_seller_name(soup)
+        sell_type = "Продажа"
+        deposit, seller_type = ["Не указано"] * 2
 
-        return [address, price, total_area, images, description, phone, date]
-    return None
-
-
-def get_lands_region_data(html, url):
-    soup = BeautifulSoup(html, "lxml")
-
-    title = get_title(soup)
-    if "сниму" not in title.lower():
-        address = "".join(title.split(",")[1:])
-        address = address[:address.find("(")].strip()
-        distance = title[title.find("(") + 1:title.find(")")]
-        total_area = get_land_params(soup)
-        price = get_price(soup)
-        images = get_photos(soup)
-        description = get_description(soup)
-        phone = get_seller_phone(url, soup)
-        date = get_date(soup)
-
-        return [address, price, distance, total_area, images, description, phone, date]
+        return [city, district, street, sell_type, deposit, land_type, distance, area, price, seller_type, images,
+                description, seller_name, phone, date]
     return None
 
 
 def crawl_page(first_offer, html, category, sell_type):
+    global visited_urls
     soup = BeautifulSoup(html, "lxml")
     try:
-        offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
+        #offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
+        offers = soup.find_all("a", class_="site3")
     except:
         offers = []
     if offers is None or not offers:
@@ -490,41 +528,41 @@ def crawl_page(first_offer, html, category, sell_type):
     for offer in offers:
         try:
             url = "http://kvadrat64.ru/" + offer.get("href")
+            if url in visited_urls:
+                print("kvadrat not unique")
+                time.sleep(random.uniform(5, 8))
+                continue
+            else:
+                visited_urls.append(url)
             #print(url)
+
             data = []
-            if category == "apartments":
+            if category == "Квартиры":
                 data = get_apartment_data(get_html(url), url)
+                # записываем ключевую информацию, чтобы потом найти дубликаты
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s--%s\n" % (data[0], data[4], data[6], data[5], url))
-            elif category == "commercials":
-                data = get_commercial_data(get_html(url), url)
-                with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
-            elif category == "cottages":
+                    file.write("%s--%s--%s--%s--%s--%s\n" % (data[2], data[3], data[4], data[8], data[-1], url))
+            elif category == "Дома":
                 data = get_cottage_data(get_html(url), url)
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[4], url))
-            elif category == "dachas":
-                data = get_dacha_data(get_html(url), url)
+                    file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[7], data[8], url))
+            elif category == "Участки":
+                data = get_land_data(get_html(url), url)
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
-            elif category == "lands_saratov":
-                data = get_lands_saratov_data(get_html(url), url)
+                    file.write("%s--%s--%s--%s\n" % (data[2], data[5], data[7], url))
+            elif category == "Коммерческая_недвижимость":
+                data = get_commercial_data(get_html(url), url)
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
-            elif category == "lands_region":
-                data = get_lands_region_data(get_html(url), url)
-                with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
+                    file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[6], data[10], url))
 
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
-                modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
+                modifier = "w" if (category == "Квартиры" and sell_type == "Продажа") else "a"
                 with open("breakpoints/kvadrat.txt", modifier, encoding="utf8") as file:
-                    file.write("%s--%s\n" % (data[0], data[1]))
+                    file.write("%s--%s\n" % (data[2], data[5]))
                 first_offer = False
 
-            key_info = (data[0], data[1])
+            key_info = (data[2], data[5])
 
             if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_cottage_sell,
                                            break_cottage_rent, break_commercial_sell, break_commercial_rent,
@@ -532,27 +570,30 @@ def crawl_page(first_offer, html, category, sell_type):
                 print("Парсинг завершен kvadrat")
                 return True
 
-            if category == "apartments" or category == "cottages":
-                if sell_type == "Аренда":
-                    data.insert(1, sell_type + "; " + data[1])  # прибавляем срок аренды
-                else:
-                    data.insert(1, sell_type)
-                data.pop(3)  # и удаляем срок аренды как отдельный элемент списка
-            elif category == "commercials":
-                data.insert(1, sell_type)
+            data.insert(4, sell_type)
 
-            if data[-1] != "Не указано" and data[-1] < datetime.datetime.today() - datetime.timedelta(days=1):
+            # на каком месте находится дата объявления
+            index_of_date = -1
+            if category == "Квартиры" or category == "Коммерческая_недвижимость":
+                index_of_date = -5
+            elif category == "Дома":
+                index_of_date = -7
+            elif category == "Участки":
+                index_of_date = -1
+
+            if data[index_of_date] != "Не указано" and data[index_of_date] < datetime.datetime.today() - datetime.timedelta(days=1):
                 # сраниваем форматы datetime, чтобы знать, когда закончить парсинг
                 print("Парсинг завершен kvadrat")
                 return True
             else:
                 # переводим в строковый формат
-                data[-1] = str(data[-1]).split()[0]
+                data[index_of_date] = str(data[index_of_date]).split()[0]
 
-            if data[0] != "Не указано":
-                db.insert_data("kvadrat_%s" % category, data)
+            if data[0] != "Не указано" and data is not None:
+                db.insert_data(category, data)
+                print("parsed page kvadrat")
+
             #print(data)
-            print("parsed page kvadrat")
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
@@ -566,8 +607,7 @@ def parse(category_url, category_name, sell_type):
     total_pages = get_total_pages(get_html(category_url))
 
     for page in range(1, total_pages + 1):
-        if (category_name == "cottages" and sell_type == "Продажа") or category_name == "lands_saratov" \
-                or category_name == "lands_region":
+        if (category_name == "Дома" and sell_type == "Продажа") or category_name == "Участки":
             url = category_url.split("-")
             url_gen = "-".join(url[:2]) + "-" + str(page) + "-" + url[3]
         else:
@@ -582,32 +622,41 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
+    global visited_urls
     url_apartments_sell = "http://kvadrat64.ru/sellflatbank-50-1.html"
-    parse(url_apartments_sell, "apartments", "Продажа")
+    parse(url_apartments_sell, "Квартиры", "Продажа")
 
+    visited_urls = []
     url_apartments_rent = "https://kvadrat64.ru/giveflatbank-50-1.html"
-    parse(url_apartments_rent, "apartments", "Аренда")
+    parse(url_apartments_rent, "Квартиры", "Аренда")
 
+    visited_urls = []
     url_cottages_sell = "https://kvadrat64.ru/search-103-1-50664.html"
-    parse(url_cottages_sell, "cottages", "Продажа")
+    parse(url_cottages_sell, "Дома", "Продажа")
 
+    visited_urls = []
     url_cottages_rent = "https://kvadrat64.ru/giveflatbank-9-1.html"
-    parse(url_cottages_rent, "cottages", "Аренда")
+    parse(url_cottages_rent, "Дома", "Аренда")
 
+    visited_urls = []
     url_commercials_sell = "https://kvadrat64.ru/sellcombank-1000-1.html"
-    parse(url_commercials_sell, "commercials", "Продажа")
+    parse(url_commercials_sell, "Коммерческая_недвижимость", "Продажа")
 
+    visited_urls = []
     url_commercials_rent = "https://kvadrat64.ru/givecombank-1000-1.html"
-    parse(url_commercials_rent, "commercials", "Аренда")
+    parse(url_commercials_rent, "Коммерческая_недвижимость", "Аренда")
 
+    visited_urls = []
     url_dachas_sell = "https://kvadrat64.ru/sellzagbank-1000-1.html"
-    parse(url_dachas_sell, "dachas", "Продажа")
+    parse(url_dachas_sell, "Дома", "Продажа")
 
+    visited_urls = []
     url_saratov_lands_sell = "https://kvadrat64.ru/search-41-1-24435.html"
-    parse(url_saratov_lands_sell, "lands_saratov", "Продажа")
+    parse(url_saratov_lands_sell, "Участки", "Продажа")
 
+    visited_urls = []
     url_region_lands_sell = "https://kvadrat64.ru/search-412-1-24450.html"
-    parse(url_region_lands_sell, "lands_region", "Продажа")
+    parse(url_region_lands_sell, "Участки", "Продажа")
 
 
 if __name__ == "__main__":

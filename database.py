@@ -40,7 +40,7 @@ class DataBase:
 
         elif category == "Коммерческая_недвижимость":
             self.cursor.execute("CREATE TABLE IF NOT EXISTS Коммерческая_недвижимость"
-                                "Город TEXT, Район TEXT, Улица TEXT, Номер_дома TEXT, Тип_сделки TEXT, Цена TEXT, "
+                                "(Город TEXT, Район TEXT, Улица TEXT, Номер_дома TEXT, Тип_сделки TEXT, Цена TEXT, "
                                 "Тип_недвижимости TEXT, Класс_здания TEXT, Мебель TEXT, Вход TEXT, Общая_площадь TEXT, "
                                 "Дата TEXT, Телефон TEXT, Фото TEXT, Описание TEXT, Имя_продавца TEXT);")
 
@@ -48,7 +48,7 @@ class DataBase:
             self.cursor.execute("CREATE TABLE IF NOT EXISTS Участки"
                                 "(Город TEXT, Район TEXT, Улица TEXT, Тип_сделки TEXT, Залог TEXT, Статус_участка TEXT, "
                                 "Расстояние_до_города TEXT, Площадь_участка TEXT, Цена TEXT, Право_собственности TEXT, "
-                                "Фото TEXT, Описание TEXT, Имя_продавца TEXT, Телефон TEXT);")
+                                "Фото TEXT, Описание TEXT, Имя_продавца TEXT, Телефон TEXT, Дата TEXT);")
 
         elif category == "Дубликаты":
             self.cursor.execute("CREATE TABLE IF NOT EXISTS Дубликаты (Заголовок TEXT, URLs TEXT);")

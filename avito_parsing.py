@@ -406,9 +406,10 @@ def get_land_data(url, html):
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url)
+        date = get_date(soup)
 
         return [city, district, street, sell_type, deposit, land_type, distance, area, price, seller_type, images,
-                description, seller_name, phone]
+                description, seller_name, phone, date]
     return None
 
 
@@ -475,7 +476,7 @@ def crawl_page(first_offer, html, category):
         try:
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
-                modifier = "w" if category == "apartments" else "a"
+                modifier = "w" if category == "Квартиры" else "a"
                 with open("breakpoints/avito.txt", modifier, encoding="utf8") as file:
                     file.write("%s--%s\n" % (offer.find("a", class_="item-description-title-link").get("title"),
                                                  offer.find("span", {"class": "price", "itemprop": "price"}).get("content")))
@@ -518,11 +519,11 @@ def crawl_page(first_offer, html, category):
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[6], data[10], url))
 
-            if data[0] != "Не указано":
+            if data[0] != "Не указано" and data is not None:
                 db.insert_data(category, data)
                 print("parsed page avito")
 
-            #print(data)
+            print(data)
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:

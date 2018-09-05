@@ -192,11 +192,14 @@ def get_description(soup):
 
 def get_date(soup):
     try:
-        relative_date = soup.find("div", class_="productPage__createDate").find("span").text.strip().split(",")
-        if relative_date[0] == "сегодня":
-            date = str(datetime.datetime.today()).split()[0] + relative_date[1]
+        relative_date = soup.find("div", class_="productPage__createDate").find("span").text.strip()
+        if "," in relative_date:
+            if relative_date.split(",")[0] == "сегодня":
+                date = str(datetime.datetime.today()).split()[0] + relative_date.split(",")[1]
+            else:
+                date = str(datetime.datetime.today() - datetime.timedelta(days=2)).split()[0] + relative_date.split(",")[1]
         else:
-            date = str(datetime.datetime.today() - datetime.timedelta(days=2)).split()[0] + relative_date[1]
+            date = relative_date
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " irr get_date\n")
@@ -450,7 +453,7 @@ def crawl_page(first_offer, html, category, sell_type):
 
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
-                modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
+                modifier = "w" if (category == "Квартиры" and sell_type == "Продажа") else "a"
                 with open("breakpoints/irr.txt", modifier, encoding="utf8") as file:
                     file.write("%s--%s\n" % (data[2], data[5]))
                 first_offer = False
@@ -466,7 +469,7 @@ def crawl_page(first_offer, html, category, sell_type):
             if data[0] != "Не указано":
                 db.insert_data(category, data)
                 print("parsed page irr")
-            #print(data)
+            print(data)
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
@@ -494,12 +497,12 @@ def main():
     global visited_urls
     # на сайте есть разделения продажа/аренда
     # сначала парсим страницу с предложениями продажи
-    # url_apartments_sell = "https://saratovskaya-obl.irr.ru/real-estate/apartments-sale/sort/date_sort:desc/"
-    # parse(url_apartments_sell, "Квартиры", "Продажа")
+    url_apartments_sell = "https://saratovskaya-obl.irr.ru/real-estate/apartments-sale/sort/date_sort:desc/"
+    parse(url_apartments_sell, "Квартиры", "Продажа")
 
-    # visited_urls = []
-    # url_apartments_rent = "https://saratovskaya-obl.irr.ru/real-estate/rent/sort/date_sort:desc/"
-    # parse(url_apartments_rent, "Квартиры", "Аренда")
+    visited_urls = []
+    url_apartments_rent = "https://saratovskaya-obl.irr.ru/real-estate/rent/sort/date_sort:desc/"
+    parse(url_apartments_rent, "Квартиры", "Аренда")
 
     visited_urls = []
     url_commercials_sell = "https://saratovskaya-obl.irr.ru/real-estate/commercial-sale/sort/date_sort:desc/"
