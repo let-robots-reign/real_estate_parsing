@@ -117,9 +117,9 @@ def get_selling_info(soup):
             rent_info = "Не аренда"
         price = soup.find("span", class_="js-item-price").text.strip()
         # ошибка кодировки при записи, собираем сообщение вручную
-        if sell_type == "Аренда: посуточно":
+        if rent_info == "посуточно":
             price = "от " + price + " за сутки"
-        elif sell_type == "Аренда: длительный срок":
+        elif rent_info == "длительный срок":
             if per_meter:
                 price = price + " в месяц за м2"
             else:
@@ -522,7 +522,7 @@ def crawl_page(first_offer, html, category):
                 db.insert_data(category, data)
                 print("parsed page avito")
 
-            print(data)
+            #print(data)
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
