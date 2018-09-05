@@ -16,7 +16,10 @@ def main():
     print("Job started", datetime.datetime.today())
 
     db = DataBase()
-    db.create_table("dublicates")
+    db.create_table("Квартиры")
+    db.create_table("Дома")
+    db.create_table("Коммерческая_недвижимость")
+    db.create_table("Дубликаты")
 
     if os.path.isfile("logs.txt"):
         os.remove("logs.txt")
@@ -34,7 +37,7 @@ def main():
             for data in total_data:
                 if all(x != "Не указано" for x in data):  # avoid writing dummy records
                     if len(total_data[data]) > 1:
-                        db.insert_data("dublicates", [", ".join(data), "\n".join(total_data[data])])
+                        db.insert_data("Дубликаты", [", ".join(data), "\n".join(total_data[data])])
     except Exception as e:
         print(e)
 
@@ -69,7 +72,7 @@ if __name__ == '__main__':
     import schedule
     import time
 
-    schedule.every().day.at("14:50").do(main)
+    schedule.every().day.at("11:00").do(main)
 
     while True:
         schedule.run_pending()

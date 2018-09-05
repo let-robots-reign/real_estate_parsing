@@ -467,9 +467,14 @@ def crawl_page(first_offer, html, category, sell_type):
 
             data.insert(4, sell_type)
             if data[0] != "Не указано":
-                db.insert_data(category, data)
+                try:
+                    db.insert_data(category, data)
+                except:
+                    db.close()
+                    db = DataBase()
+                    db.insert_data(category, data)
                 print("parsed page irr")
-            print(data)
+            #print(data)
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:

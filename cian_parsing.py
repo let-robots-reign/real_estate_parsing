@@ -44,12 +44,13 @@ def get_address(soup):
         city = address.split(",")[1].strip()
         block_number = address.split(",")[-1].strip()
         if "ул " in block_number.lower() or "ул." in block_number.lower() or "улица" in block_number.lower() \
-                or " пер" in block_number.lower():
+                or " пер" in block_number.lower() or "проезд" in block_number.lower() or "проспект" in block_number.lower():
             street = block_number
             block_number = "Не указано"
 
         for param in address.split(",")[1:-1]:
-            if "ул " in param.lower() or "ул." in param.lower() or "улица" in param.lower() or " пер" in param.lower():
+            if "ул " in param.lower() or "ул." in param.lower() or "улица" in param.lower() or " пер" in param.lower() \
+                    or "проезд" in param.lower() or "проспект" in param.lower():
                 street = param.strip()
             elif "район" in param.lower() or "р-н" in param.lower():
                 district = param.strip()
@@ -469,7 +470,12 @@ def crawl_page(page, html, category, sell_type):
 
             data.insert(4, sell_type)
             if data[0] != "Не указано":
-                db.insert_data(category, data)
+                try:
+                    db.insert_data(category, data)
+                except:
+                    db.close()
+                    db = DataBase()
+                    db.insert_data(category, data)
                 print("parsed page cian")
 
             #print(*data, sep="\n")

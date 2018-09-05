@@ -73,13 +73,13 @@ def get_address(driver):
         city = address.split(",")[0]
         block_number = address.split(",")[-1].strip()
         if "ул " in block_number.lower() or "ул." in block_number.lower() or "улица" in block_number.lower() \
-                or " пер" in block_number.lower() or "проспект" in block_number.lower():
+                or " пер" in block_number.lower() or "проспект" in block_number.lower() or "проезд" in block_number.lower():
             street = block_number
             block_number = "Не указано"
 
         for param in address.split(",")[1:-1]:
             if "ул " in param.lower() or "ул." in param.lower() or "улица" in param.lower() \
-                    or " пер" in param.lower() or "проспект" in param.lower():
+                    or " пер" in param.lower() or "проспект" in param.lower() or "проезд" in param.lower():
                 street = param.strip()
             elif "район" in param.lower() or "р-н" in param.lower():
                 district = param.strip()
@@ -342,19 +342,29 @@ def crawl_page(html):
                 data = get_apartment_data(url)
                 data.insert(14, date)
                 if data[0] != "Не указано":
-                    db.insert_data("Квартиры", data)
+                    try:
+                        db.insert_data("Квартиры", data)
+                    except:
+                        db.close()
+                        db = DataBase()
+                        db.insert_data("Квартиры", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s--%s--%s\n" % (data[2], data[3], data[4], data[8], data[-1], url))
             elif any(x in category for x in ["Дом", "Коттедж", "Таунхаус", "Дача", "Участок"]):
                 data = get_cottage_data(url, category)
                 data.insert(12, date)
                 if data[0] != "Не указано":
-                    db.insert_data("Дома", data)
+                    try:
+                        db.insert_data("Дома", data)
+                    except:
+                        db.close()
+                        db = DataBase()
+                        db.insert_data("Дома", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
                     file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[7], data[8], url))
 
-            print(*data, sep="\n")
-            print("--------------------------------------")
+            #print(*data, sep="\n")
+            #print("--------------------------------------")
             print("parsed page youla")
 
         except Exception as e:

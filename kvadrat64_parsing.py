@@ -590,7 +590,12 @@ def crawl_page(first_offer, html, category, sell_type):
                 data[index_of_date] = str(data[index_of_date]).split()[0]
 
             if data[0] != "Не указано" and data is not None:
-                db.insert_data(category, data)
+                try:
+                    db.insert_data(category, data)
+                except:
+                    db.close()
+                    db = DataBase()
+                    db.insert_data(category, data)
                 print("parsed page kvadrat")
 
             #print(data)
@@ -607,7 +612,7 @@ def parse(category_url, category_name, sell_type):
     total_pages = get_total_pages(get_html(category_url))
 
     for page in range(1, total_pages + 1):
-        if (category_name == "Дома" and sell_type == "Продажа") or category_name == "Участки":
+        if (category_name == "Дома" and sell_type == "Продажа" and "sellzagbank" not in category_url) or category_name == "Участки":
             url = category_url.split("-")
             url_gen = "-".join(url[:2]) + "-" + str(page) + "-" + url[3]
         else:

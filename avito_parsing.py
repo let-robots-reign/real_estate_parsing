@@ -520,10 +520,15 @@ def crawl_page(first_offer, html, category):
                     file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[6], data[10], url))
 
             if data[0] != "Не указано" and data is not None:
-                db.insert_data(category, data)
+                try:
+                    db.insert_data(category, data)
+                except:
+                    db.close()
+                    db = DataBase()
+                    db.insert_data(category, data)
                 print("parsed page avito")
 
-            print(data)
+            #print(data)
 
         except Exception as e:
             with open("logs.txt", "a", encoding="utf8") as file:
