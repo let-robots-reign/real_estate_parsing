@@ -62,9 +62,7 @@ months = {
 date_break_point = yesterday[2] + " " + months[yesterday[1]]
 
 db = DataBase()
-db.create_table("irr_apartments")
-db.create_table("irr_cottages")
-db.create_table("irr_commercials")
+visited_urls = []
 
 
 def get_html(url):
@@ -95,11 +93,12 @@ def get_title(soup):
 def get_address(soup):
     try:
         address = soup.find("div", class_="productPage__infoTextBold js-scrollToMap").text.strip()
+        city = address.split(",")[0]
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " irr get_address\n")
-        address = "Не указано"
-    return address
+        city = "Не указано"
+    return city
 
 
 def get_material(soup):
@@ -123,11 +122,31 @@ def get_price(soup):
         fee = soup.find("div", class_="productPage__fee")
         if fee is not None:
             price += " (" + fee.text.strip() + ")"
+
+        if "в месяц" in price:
+            rent_info = "длительный срок"
+        elif "за сутки" in price:
+            rent_info = "посуточно"
+        else:
+            rent_info = "Не аренда"
+
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " irr get_price\n")
-        price = "Не указано"
-    return price
+        price, rent_info = "Не указано", "Не указано"
+    return price, rent_info
+
+
+def get_block_type(soup):
+    block_type = "Вторичка"
+    try:
+        seller_site = soup.find("a", class_="js-sellerSiteLink")
+        if seller_site is not None:
+            block_type = "Новостройка"
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " irr get_block_type\n")
+    return block_type
 
 
 def get_seller_info(soup):
@@ -173,11 +192,14 @@ def get_description(soup):
 
 def get_date(soup):
     try:
-        relative_date = soup.find("div", class_="productPage__createDate").find("span").text.strip().split(",")
-        if relative_date[0] == "сегодня":
-            date = str(datetime.datetime.today()).split()[0] + relative_date[1]
+        relative_date = soup.find("div", class_="productPage__createDate").find("span").text.strip()
+        if "," in relative_date:
+            if relative_date.split(",")[0] == "сегодня":
+                date = str(datetime.datetime.today()).split()[0] + relative_date.split(",")[1]
+            else:
+                date = str(datetime.datetime.today() - datetime.timedelta(days=2)).split()[0] + relative_date.split(",")[1]
         else:
-            date = str(datetime.datetime.today() - datetime.timedelta(days=2)).split()[0] + relative_date[1]
+            date = relative_date
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " irr get_date\n")
@@ -196,7 +218,7 @@ def get_seller_phone(soup):
 
 
 def get_apartment_params(soup):
-    rooms_number, floor, total_area, kitchen_area, living_area, furnish = ["Не указано"] * 6
+    rooms_number, floor, total_floors, total_area, kitchen_area, living_area, furnish, district, street, block_number = ["Не указано"] * 10
     try:
         building_params = []
         divs = soup.find_all("div", class_="productPage__infoColumnBlock js-columnBlock")
@@ -207,6 +229,8 @@ def get_apartment_params(soup):
             info = building_params[i].text.strip()
             if "Этаж:" in info:
                 floor = info.split(":")[1].strip()
+            elif "Этажей в здании" in info:
+                total_floors = info.split(":")[1].strip()
             elif "Комнат в квартире" in info:
                 rooms_number = info.split(":")[1].strip()
             elif "Общая площадь" in info:
@@ -220,14 +244,20 @@ def get_apartment_params(soup):
                 if furnish == "1":
                     # иногда выводит "1", хотя на странице не указан
                     furnish = "Не указано"
+            elif "Улица" in info:
+                street = info.split(":")[1].strip()
+            elif "Район города" in info:
+                district = info.split(":")[1].strip()
+            elif "Дом" in info:
+                block_number = info.split(":")[1].strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " irr get_apartment_params\n")
-    return rooms_number, floor, total_area, kitchen_area, living_area, furnish
+    return rooms_number, floor, total_floors, total_area, kitchen_area, living_area, furnish, district, street, block_number
 
 
 def get_commercial_params(soup):
-    building_type, parking, ceilings, area = ["Не указано"] * 4
+    building_type, parking, ceilings, area, entrance, district, street, block_number = ["Не указано"] * 8
     try:
         building_params = []
         divs = soup.find_all("div", class_="productPage__infoColumnBlock js-columnBlock")
@@ -244,14 +274,22 @@ def get_commercial_params(soup):
                 parking = "Парковка есть"
             elif "Высота потолков" in info:
                 ceilings = info.split(":")[1].strip()
+            elif "Вход" in info:
+                entrance = info.strip()
+            elif "Улица" in info:
+                street = info.split(":")[1].strip()
+            elif "Район города" in info:
+                district = info.split(":")[1].strip()
+            elif "Дом" in info:
+                block_number = info.split(":")[1].strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " irr get_commercial_params\n")
-    return building_type, parking, ceilings, area
+    return building_type, parking, ceilings, area, entrance, district, street, block_number
 
 
 def get_cottage_params(soup):
-    house_area, material, total_floors, land_area, status, comforts = ["Не указано"] * 6
+    house_area, material, total_floors, land_area, status, comforts, district, street, block_number = ["Не указано"] * 9
     try:
         building_params = []
         divs = soup.find_all("div", class_="productPage__infoColumnBlock js-columnBlock")
@@ -275,27 +313,37 @@ def get_cottage_params(soup):
                     comforts = info.strip()
                 else:
                     comforts += "; " + info.strip()
+            elif "Улица" in info:
+                street = info.split(":")[1].strip()
+            elif "Район города" in info:
+                district = info.split(":")[1].strip()
+            elif "Дом" in info:
+                block_number = info.split(":")[1].strip()
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " irr get_cottage_params\n")
-    return house_area, material, total_floors, land_area, status, comforts
+    return house_area, material, total_floors, land_area, status, comforts, district, street, block_number
 
 
 def get_apartment_data(html):
     soup = BeautifulSoup(html, "lxml")
 
     #title = get_title(soup)
-    address = get_address(soup)
+    city = get_address(soup)
     material = get_material(soup)
-    rooms_number, floor, total_area, kitchen_area, living_area, furnish = get_apartment_params(soup)
-    price = get_price(soup)
-    seller_type, seller_name = get_seller_info(soup)
+    rooms_number, floor, total_floors, total_area, kitchen_area, living_area, furnish, district, street, block_number = get_apartment_params(soup)
+    price, rent_info = get_price(soup)
+    block_type = get_block_type(soup)
+    #seller_type, seller_name = get_seller_info(soup)
     images = get_photos(soup)
     description = get_description(soup)
     phone = get_seller_phone(soup)
+    date = get_date(soup)
+    selling_detail = "Не указано"  # на irr нет этой информации
 
-    return [address, price, material, rooms_number, floor, total_area, kitchen_area, living_area, furnish,
-            seller_type, images, description, seller_name, phone]
+    return [city, district, street, block_number, rent_info, price, block_type,
+            rooms_number, total_area, total_floors, material, selling_detail, images,
+            description, date, phone, kitchen_area, living_area, floor]
 
 
 def get_commercial_data(html):
@@ -318,16 +366,18 @@ def get_commercial_data(html):
     else:
         object_type = "Не указано"
 
-    address = get_address(soup)
-    building_type, parking, ceilings, area = get_commercial_params(soup)
-    price = get_price(soup)
+    city = get_address(soup)
+    building_type, parking, ceilings, area, entrance, district, street, block_number = get_commercial_params(soup)
+    price, rent_info = get_price(soup)
     seller_type, seller_name = get_seller_info(soup)
     images = get_photos(soup)
     description = get_description(soup)
     phone = get_seller_phone(soup)
+    date = get_date(soup)
+    office_class, furniture = "Не указано", "Не указано"  # на irr нет этой информации
 
-    return [address, price, object_type, building_type, parking, ceilings, area, seller_type, images,
-            description, seller_name, phone]
+    return [city, district, street, block_number, price, object_type, office_class,
+            furniture, entrance, area, date, phone, images, description, seller_name]
 
 
 def get_cottage_data(html):
@@ -345,20 +395,23 @@ def get_cottage_data(html):
     else:
         object_type = "Не указано"
 
-    address = get_address(soup)
-    price = get_price(soup)
-    house_area, material, total_floors, land_area, status, comforts = get_cottage_params(soup)
+    city = get_address(soup)
+    price, rent_info = get_price(soup)
+    house_area, material, total_floors, land_area, status, comforts, district, street, block_number = get_cottage_params(soup)
     _, seller_name = get_seller_info(soup)
     date = get_date(soup)
     images = get_photos(soup)
     description = get_description(soup)
     phone = get_seller_phone(soup)
+    selling_detail = "Не указано"  # на irr нет этой информации
 
-    return [address, price, object_type, house_area, material, total_floors, land_area, status, comforts,
-            images, description, date, seller_name, phone]
+    return [city, district, street, block_number, rent_info, price, object_type,
+            house_area, comforts, selling_detail, images, description, date, phone, material,
+            total_floors, land_area, status, seller_name]
 
 
 def crawl_page(first_offer, html, category, sell_type):
+    global visited_urls
     soup = BeautifulSoup(html, "lxml")
     try:
         offers = soup.find("div", class_="listing js-productGrid ").find_all("div", class_="listing__item")
@@ -375,41 +428,52 @@ def crawl_page(first_offer, html, category, sell_type):
                 return True
 
             url = offer.find("div", class_="listing__itemTitleWrapper").find("a", class_="listing__itemTitle").get("href")
+            if url in visited_urls:
+                print("irr not unique")
+                time.sleep(random.uniform(5, 8))
+                continue
+            else:
+                visited_urls.append(url)
             #print(url)
 
             data = []
-            if category == "apartments":
+            if category == "Квартиры":
                 data = get_apartment_data(get_html(url))
                 # записываем ключевую информацию, чтобы потом найти дубликаты
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[5], url))
-            elif category == "cottages":
+                    file.write("%s--%s--%s--%s--%s--%s\n" % (data[2], data[3], data[4], data[8], data[-1], url))
+            elif category == "Дома":
                 data = get_cottage_data(get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[2], data[3], url))
-            elif category == "commercials":
+                    file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[7], data[8], url))
+            elif category == "Коммерческая_недвижимость":
                 data = get_commercial_data(get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[2], url))
+                    file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[6], data[10], url))
 
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
-                modifier = "w" if (category == "apartments" and sell_type == "Продажа") else "a"
+                modifier = "w" if (category == "Квартиры" and sell_type == "Продажа") else "a"
                 with open("breakpoints/irr.txt", modifier, encoding="utf8") as file:
-                    file.write("%s--%s\n" % (data[0], data[1]))
+                    file.write("%s--%s\n" % (data[2], data[5]))
                 first_offer = False
 
-            key_info = (data[0], data[1])
+            key_info = (data[2], data[5])
 
             if any(x == key_info for x in [break_apartment_sell, break_apartment_rent, break_commercial_sell,
                                            break_commercial_rent, break_cottage_sell, break_cottage_rent]):
                 print("Парсинг завершен irr")
                 return True
 
-            data.insert(1, sell_type)
+            data.insert(4, sell_type)
             if data[0] != "Не указано":
-                db.insert_data("irr_%s" % category, data)
-            print("parsed page irr")
+                try:
+                    db.insert_data(category, data)
+                except:
+                    db.close()
+                    db = DataBase()
+                    db.insert_data(category, data)
+                print("parsed page irr")
             #print(data)
 
         except Exception as e:
@@ -435,25 +499,31 @@ def parse(category_url, category_name, sell_type):
 
 
 def main():
+    global visited_urls
     # на сайте есть разделения продажа/аренда
     # сначала парсим страницу с предложениями продажи
     url_apartments_sell = "https://saratovskaya-obl.irr.ru/real-estate/apartments-sale/sort/date_sort:desc/"
-    parse(url_apartments_sell, "apartments", "Продажа")
+    parse(url_apartments_sell, "Квартиры", "Продажа")
 
+    visited_urls = []
     url_apartments_rent = "https://saratovskaya-obl.irr.ru/real-estate/rent/sort/date_sort:desc/"
-    parse(url_apartments_rent, "apartments", "Аренда")
+    parse(url_apartments_rent, "Квартиры", "Аренда")
 
+    visited_urls = []
     url_commercials_sell = "https://saratovskaya-obl.irr.ru/real-estate/commercial-sale/sort/date_sort:desc/"
-    parse(url_commercials_sell, "commercials", "Продажа")
+    parse(url_commercials_sell, "Коммерческая_недвижимость", "Продажа")
 
+    visited_urls = []
     url_commercials_rent = "https://saratovskaya-obl.irr.ru/real-estate/commercial/sort/date_sort:desc/"
-    parse(url_commercials_rent, "commercials", "Аренда")
+    parse(url_commercials_rent, "Коммерческая_недвижимость", "Аренда")
 
+    visited_urls = []
     url_cottages_sell = "https://saratovskaya-obl.irr.ru/real-estate/out-of-town/sort/date_sort:desc/"
-    parse(url_cottages_sell, "cottages", "Продажа")
+    parse(url_cottages_sell, "Дома", "Продажа")
 
+    visited_urls = []
     url_cottages_rent = "https://saratovskaya-obl.irr.ru/real-estate/out-of-town-rent/sort/date_sort:desc/"
-    parse(url_cottages_rent, "cottages", "Аренда")
+    parse(url_cottages_rent, "Дома", "Аренда")
 
 
 if __name__ == "__main__":

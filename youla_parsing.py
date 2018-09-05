@@ -12,8 +12,7 @@ from selenium.webdriver.chrome.options import Options
 from database import DataBase
 
 db = DataBase()
-db.create_table("youla_apartments")
-db.create_table("youla_cottages")
+visited_urls = []
 
 # defining chrome options for selenium
 options = Options()
@@ -69,21 +68,45 @@ def get_category(html, k):
 def get_address(driver):
     try:
         address = driver.find_element_by_tag_name("table").find_elements_by_tag_name("tbody")[0].find_elements_by_tag_name("span")[0].text.strip()
+        # separating data from the address string
+        district, street = "Не указано", "Не указано"
+        city = address.split(",")[0]
+        block_number = address.split(",")[-1].strip()
+        if "ул " in block_number.lower() or "ул." in block_number.lower() or "улица" in block_number.lower() \
+                or " пер" in block_number.lower() or "проспект" in block_number.lower() or "проезд" in block_number.lower():
+            street = block_number
+            block_number = "Не указано"
+
+        for param in address.split(",")[1:-1]:
+            if "ул " in param.lower() or "ул." in param.lower() or "улица" in param.lower() \
+                    or " пер" in param.lower() or "проспект" in param.lower() or "проезд" in param.lower():
+                street = param.strip()
+            elif "район" in param.lower() or "р-н" in param.lower():
+                district = param.strip()
+
+        if street.split()[-1].strip().isdigit():
+            block_number = street.split()[-1].strip()
+            street = " ".join(street.split()[:-1]).strip()
+
+        return city, district, street, block_number
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " youla get_address\n")
-        address = "Не указано"
-    return address
+    return ["Не указано"] * 4
 
 
 def get_selling_type(url):
+    sell_type, rent_info = "Не указано", "Не указано"
     if "prodaja" in url:
-        return "Продажа"
+        sell_type = "Продажа"
     elif "arenda" in url:
         if "posutochno" in url:
-            return "Аренда (посуточно)"
-        return "Аренда (длительный срок)"
-    return "Не указано"
+            sell_type = "Аренда"
+            rent_info = "посуточно"
+        else:
+            sell_type = "Аренда"
+            rent_info = "длительный срок"
+    return sell_type, rent_info
 
 
 def get_price(driver):
@@ -215,25 +238,31 @@ def get_apartment_data(url):
     driver.set_window_size(1920, 1080)
     driver.get(url)
 
-    address = get_address(driver)
-    selling_type = get_selling_type(url)
+    city, district, street, block_number = get_address(driver)
+    sell_type, rent_info = get_selling_type(url)
+    if "продажа" in sell_type:
+        rent_info = "Не аренда"
     material, lift, year, rooms_number, floor, total_floors, total_area, kitchen_area, repair = get_apartment_params(driver)
+    block_type = "Вторичка"
+    living_area = "Не указано"
     price = get_price(driver)
-    if "Аренда" in selling_type:
+    if "Аренда" in sell_type:
         if "posutochno" in url:
             price += "/день"
         else:
             price += "/мес."
-    seller_type, seller_name = get_seller_info(driver)
+    #seller_type, seller_name = get_seller_info(driver)
     images = get_photos(driver)
     description = get_description(driver)
     phone = get_seller_phone(driver)
+    selling_detail = "Не указано"
 
     driver.quit()
     vdisplay.stop()
 
-    return [address, price, selling_type, material, lift, year, rooms_number, floor, total_floors, total_area,
-            kitchen_area, repair, seller_type, images, description, seller_name, phone]
+    return [city, district, street, block_number, sell_type, rent_info, price, block_type,
+            rooms_number, total_area, total_floors, material, selling_detail, images,
+            description, phone, kitchen_area, living_area, floor]
 
 
 def get_cottage_data(url, category):
@@ -243,18 +272,29 @@ def get_cottage_data(url, category):
     driver.set_window_size(1920, 1080)
     driver.get(url)
 
-    address = get_address(driver)
-    selling_type = get_selling_type(url)
+    if "doma" in url:
+        cottage_type = "Дом"
+    elif "uchastka" in url:
+        cottage_type = "Участок"
+    else:
+        cottage_type = "Не указано"
+
+    city, district, street, block_number = get_address(driver)
+    sell_type, rent_info = get_selling_type(url)
+    if "Продажа" in sell_type:
+        rent_info = "Не аренда"
     price = get_price(driver)
-    if "Аренда" in selling_type:
+    if "Аренда" in sell_type:
         if "posutochno" in url:
             price += "/день"
         else:
             price += "/мес."
     total_area, material, total_floors, bedrooms, land_area, status, comforts = get_cottage_params(driver)
+    _, seller_name = get_seller_info(driver)
     images = get_photos(driver)
     description = get_description(driver)
     phone = get_seller_phone(driver)
+    selling_detail = "Не указано"
 
     driver.quit()
     vdisplay.stop()
@@ -262,11 +302,13 @@ def get_cottage_data(url, category):
     if category == "Участок":
         material, total_floors = "Участок", "Участок"
 
-    return [address, price, selling_type, category, total_area, material, total_floors, bedrooms,
-            land_area, status, comforts, images, description, phone]
+    return [city, district, street, block_number, sell_type, rent_info, price, cottage_type,
+            total_area, comforts, selling_detail, images, description, phone, material,
+            total_floors, land_area, status, seller_name]
 
 
 def crawl_page(html):
+    global visited_urls
     soup = BeautifulSoup(html, "lxml")
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
     offers = soup.find_all("li", class_="product_item")
@@ -283,24 +325,43 @@ def crawl_page(html):
                 return True
             k += 1
             url = "https://youla.ru" + offer.find("a").get("href")
-            #print(url)
+            if url in visited_urls:
+                print("youla not unique")
+                time.sleep(random.uniform(10, 15))
+                continue
+            else:
+                visited_urls.append(url)
+            print(url)
+
             if category is None or "saratov" not in url:
                 time.sleep(random.uniform(5, 8))
                 continue
+
             data = []
             if category == "Квартира":
                 data = get_apartment_data(url)
+                data.insert(14, date)
                 if data[0] != "Не указано":
-                    db.insert_data("youla_apartments", data)
+                    try:
+                        db.insert_data("Квартиры", data)
+                    except:
+                        db.close()
+                        db = DataBase()
+                        db.insert_data("Квартиры", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[6], data[9], url))
+                    file.write("%s--%s--%s--%s--%s--%s\n" % (data[2], data[3], data[4], data[8], data[-1], url))
             elif any(x in category for x in ["Дом", "Коттедж", "Таунхаус", "Дача", "Участок"]):
                 data = get_cottage_data(url, category)
-                data.append(date)
+                data.insert(12, date)
                 if data[0] != "Не указано":
-                    db.insert_data("youla_cottages", data)
+                    try:
+                        db.insert_data("Дома", data)
+                    except:
+                        db.close()
+                        db = DataBase()
+                        db.insert_data("Дома", data)
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[3], data[4], url))
+                    file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[7], data[8], url))
 
             #print(*data, sep="\n")
             #print("--------------------------------------")

@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import random
+import datetime
 from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -32,17 +33,14 @@ with open("breakpoints/avito.txt", "r", encoding="utf8") as file:
         break_commercial = tuple(breakpoints[3].strip().split("--"))
     except:
         break_commercial = None
-    #print(break_apartment, break_cottage, break_land, break_commercial)
+
 
 #defining chrome options for selenium
 options = Options()
 options.add_argument('--no-sandbox')
 
 db = DataBase()
-db.create_table("avito_apartments")
-db.create_table("avito_cottages")
-db.create_table("avito_lands")
-db.create_table("avito_commercials")
+visited_urls = []
 
 
 def get_html(url):
@@ -74,12 +72,32 @@ def get_title(soup):
 
 def get_address(soup):
     try:
-        address = soup.find("span", itemprop="streetAddress").text.strip()
+        address = "{}, {}".format(soup.find("meta", itemprop="addressLocality").get("content").strip(),
+                                  soup.find("span", itemprop="streetAddress").text.strip())
+        # separating data from the address string
+        district, street = "Не указано", "Не указано"
+        city = address.split(",")[0]
+        block_number = address.split(",")[-1].strip()
+        if "ул " in block_number.lower() or "ул." in block_number.lower() or "улица" in block_number.lower()\
+                or " пер" in block_number.lower():
+            street = block_number
+            block_number = "Не указано"
+
+        for param in address.split(",")[1:-1]:
+            if "ул " in param.lower() or "ул." in param.lower() or "улица" in param.lower() or " пер" in param.lower():
+                street = param.strip()
+            elif "район" in param.lower() or "р-н" in param.lower():
+                district = param.strip()
+
+        if street.split()[-1].strip().isdigit():
+            block_number = street.split()[-1].strip()
+            street = " ".join(street.split()[:-1]).strip()
+
+        return city, district, street, block_number
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " avito get_address\n")
-        address = "Не указано"
-    return address
+        return ["Не указано"] * 4
 
 
 def get_selling_info(soup):
@@ -87,18 +105,21 @@ def get_selling_info(soup):
         per_meter = False  # если цена указана за квадратный метр
         price = soup.find("span", class_="price-value-string js-price-value-string").text.strip()
         if "за сутки" in price:
-            sell_type = "Аренда: посуточно"
+            sell_type = "Аренда"
+            rent_info = "посуточно"
         elif "в месяц" in price:
-            sell_type = "Аренда: длительный срок"
+            sell_type = "Аренда"
+            rent_info = "длительный срок"
             if "за " in price:
                 per_meter = True
         else:
             sell_type = "Продажа"
+            rent_info = "Не аренда"
         price = soup.find("span", class_="js-item-price").text.strip()
         # ошибка кодировки при записи, собираем сообщение вручную
-        if sell_type == "Аренда: посуточно":
+        if rent_info == "посуточно":
             price = "от " + price + " за сутки"
-        elif sell_type == "Аренда: длительный срок":
+        elif rent_info == "длительный срок":
             if per_meter:
                 price = price + " в месяц за м2"
             else:
@@ -106,9 +127,8 @@ def get_selling_info(soup):
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " avito get_selling info\n")
-        sell_type = "Не указано"
-        price = "Не указано"
-    return sell_type, price
+        sell_type, price, rent_info = ["Не указано"] * 3
+    return sell_type, price, rent_info
 
 
 def get_deposit(soup):
@@ -174,6 +194,22 @@ def get_description(soup):
     return description
 
 
+def get_date(soup):
+    try:
+        date = soup.find("div", class_="title-info-metadata-item").text.split(",")[1].strip()
+        if "сегодня" in date:
+            date = str(datetime.datetime.today()).split()[0]
+        elif "вчера" in date:
+            date = str(datetime.datetime.today() - datetime.timedelta(days=1)).split()[0]
+        else:
+            date = "too old"
+    except Exception as e:
+        with open("logs.txt", "a", encoding="utf8") as file:
+            file.write(str(e) + " avito get_date\n")
+        date = "Не указано"
+    return date
+
+
 def get_seller_phone(url):
     # телефон показывается в виде картинки, используем selenium и pytesseract
     vdisplay = Xvfb()
@@ -212,7 +248,8 @@ def get_seller_phone(url):
 
 
 def get_apartment_params(soup):
-    rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = ["Не указано"] * 7
+    rooms_number, floor_number, total_floors, material, total_area, kitchen_area, living_area = ["Не указано"] * 7
+    block_type = "Вторичка"
     try:
         params = soup.find_all("li", class_="item-params-list-item")
         for i in range(len(params)):
@@ -224,17 +261,19 @@ def get_apartment_params(soup):
             elif "Этаж" in info:
                 floor_number = info.split(":")[1].strip()
             elif "Тип дома" in info:
-                block_type = info.split(":")[1].strip()
+                material = info.split(":")[1].strip()
             elif "Общая площадь" in info:
                 total_area = info.split(":")[1].split("м²")[0].strip()
             elif "Площадь кухни" in info:
                 kitchen_area = info.split(":")[1].split("м²")[0].strip()
             elif "Жилая площадь" in info:
                 living_area = info.split(":")[1].split("м²")[0].strip()
+            elif "Официальный застройщик" in info or "Название объекта недвижимости" in info:
+                block_type = "Новостройка"
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " avito get_apartment_params\n")
-    return rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area
+    return rooms_number, floor_number, total_floors, material, total_area, kitchen_area, living_area, block_type
 
 
 def get_cottage_params(soup):
@@ -270,9 +309,9 @@ def get_land_params(soup):
             info = params[i * 2].text.strip()
             label = labels[i].text.strip()
             if "Расстояние до города" in label:
-                distance = info.split("км")[0].strip() + " км"
+                distance = info.split(":")[1].split("км")[0].strip() + " км"
             elif "Площадь" in label:
-                area = info.split("сот")[0].strip() + " сот"
+                area = info.split(":")[1].split("сот")[0].strip() + " сот"
     except Exception as e:
         with open("logs.txt", "a", encoding="utf8") as file:
             file.write(str(e) + " avito get_land_params\n")
@@ -302,17 +341,21 @@ def get_apartment_data(url, html):
 
     title = get_title(soup)
     if "сниму" not in title.lower() and "куплю" not in title.lower():
-        address = get_address(soup)
-        sell_type, price = get_selling_info(soup)
-        rooms_number, floor_number, total_floors, block_type, total_area, kitchen_area, living_area = get_apartment_params(soup)
-        seller_type = get_seller_type(soup)
-        seller_name = get_seller_name(soup)
+        city, district, street, block_number = get_address(soup)
+        sell_type, price, rent_info = get_selling_info(soup)
+        rooms_number, floor_number, total_floors, material, total_area, kitchen_area, living_area, block_type = get_apartment_params(soup)
+        #seller_type = get_seller_type(soup)
+        #seller_name = get_seller_name(soup)
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url)
+        date = get_date(soup)
+        selling_detail = "Не указано"  # на авито не указывается эта информация
 
-        return [address, sell_type, block_type, rooms_number, floor_number, total_floors, total_area,
-                kitchen_area, living_area, price, seller_type, images, description, seller_name, phone]
+        return [city, district, street, block_number, sell_type, rent_info, price, block_type,
+                rooms_number, total_area, total_floors, material, selling_detail, images,
+                description, date, phone, kitchen_area, living_area, floor_number]
+
     return None
 
 
@@ -321,17 +364,20 @@ def get_cottage_data(url, html):
 
     title = get_title(soup)
     if "сниму" not in title.lower() and "куплю" not in title.lower():
-        address = get_address(soup)
-        sell_type, price = get_selling_info(soup)
+        city, district, street, block_number = get_address(soup)
+        sell_type, price, rent_info = get_selling_info(soup)
         house_type, total_floors, distance, material, total_area, land_area = get_cottage_params(soup)
-        seller_type = get_seller_type(soup)
+        #seller_type = get_seller_type(soup)
         seller_name = get_seller_name(soup)
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url)
+        date = get_date(soup)
+        selling_detail, comforts, land_status = ["Не указано"] * 3  # на авито не указывается эта информация
 
-        return [address, sell_type, material, total_floors, total_area, land_area, price, distance,
-                seller_type, images, description, seller_name, phone]
+        return [city, district, street, block_number, sell_type, rent_info, price, house_type,
+                total_area, comforts, selling_detail, images, description, date, phone, material,
+                total_floors, land_area, land_status, seller_name]
     return None
 
 
@@ -346,8 +392,8 @@ def get_land_data(url, html):
         else:
             land_type = "Не указано"
 
-        address = get_address(soup)
-        sell_type, price = get_selling_info(soup)
+        city, district, street, _ = get_address(soup)
+        sell_type, price, _ = get_selling_info(soup)
 
         if "Аренда" in sell_type:
             deposit = get_deposit(soup)
@@ -360,9 +406,10 @@ def get_land_data(url, html):
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url)
+        date = get_date(soup)
 
-        return [address, sell_type, deposit, land_type, distance, area, price, seller_type, images,
-                description, seller_name, phone]
+        return [city, district, street, sell_type, deposit, land_type, distance, area, price, seller_type, images,
+                description, seller_name, phone, date]
     return None
 
 
@@ -387,13 +434,13 @@ def get_commercial_data(url, html):
         else:
             object_type = "Не указано"
 
-        address = get_address(soup)
-        sell_type, price = get_selling_info(soup)
+        city, district, street, block_number = get_address(soup)
+        sell_type, price, _ = get_selling_info(soup)
 
-        if "Аренда" in sell_type:
-            deposit = get_deposit(soup)
-        else:
-            deposit = "Не аренда"
+        # if "Аренда" in sell_type:
+        #     deposit = get_deposit(soup)
+        # else:
+        #     deposit = "Не аренда"
 
         # если не офис, не заполняем поле office_class
         if object_type == "Офисное помещение":
@@ -402,18 +449,21 @@ def get_commercial_data(url, html):
             _, area = get_commercial_params(soup)
             office_class = "Не офис"
 
-        seller_type = get_seller_type(soup)
+        #seller_type = get_seller_type(soup)
         seller_name = get_seller_name(soup)
         images = get_photos(soup)
         description = get_description(soup)
         phone = get_seller_phone(url)
+        date = get_date(soup)
+        furniture, entrance = "Не указано", "Не указано"  # на авито не указывается эта информация
 
-        return [address, sell_type, deposit, object_type, office_class, area, price, seller_type,
-                images, description, seller_name, phone]
+        return [city, district, street, block_number, sell_type, price, object_type, office_class,
+                furniture, entrance, area, date, phone, images, description, seller_name]
     return None
 
 
 def crawl_page(first_offer, html, category):
+    global visited_urls
     soup = BeautifulSoup(html, "lxml")
     try:
         offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
@@ -426,7 +476,7 @@ def crawl_page(first_offer, html, category):
         try:
             if first_offer:
                 # сохраняем самую первую запись как точку выхода
-                modifier = "w" if category == "apartments" else "a"
+                modifier = "w" if category == "Квартиры" else "a"
                 with open("breakpoints/avito.txt", modifier, encoding="utf8") as file:
                     file.write("%s--%s\n" % (offer.find("a", class_="item-description-title-link").get("title"),
                                                  offer.find("span", {"class": "price", "itemprop": "price"}).get("content")))
@@ -443,34 +493,41 @@ def crawl_page(first_offer, html, category):
                 return True
 
             url = "https://avito.ru" + offer.find("div", class_="description").find("h3").find("a").get("href")
+            if url in visited_urls:
+                print("avito not unique")
+                time.sleep(random.uniform(5, 8))
+                continue
+            else:
+                visited_urls.append(url)
 
             data = []
-            if category == "apartments":
+            if category == "Квартиры":
                 data = get_apartment_data(url, get_html(url))
                 # записываем ключевую информацию, чтобы потом найти дубликаты
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s--%s\n" % (data[0], data[3].split("-")[0], data[6], url))
-            elif category == "cottages":
+                    file.write("%s--%s--%s--%s--%s--%s\n" % (data[2], data[3], data[4], data[8], data[-1], url))
+            elif category == "Дома":
                 data = get_cottage_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
-            elif category == "lands":
+                    file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[7], data[8], url))
+            elif category == "Участки":
                 data = get_land_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[5], url))
-            elif category == "commercials":
+                    file.write("%s--%s--%s--%s\n" % (data[2], data[5], data[7], url))
+            elif category == "Коммерческая_недвижимость":
                 data = get_commercial_data(url, get_html(url))
                 with open("total_data.txt", "a", encoding="utf8") as file:
-                    file.write("%s--%s--%s\n" % (data[0], data[3], url))
+                    file.write("%s--%s--%s--%s--%s\n" % (data[2], data[3], data[6], data[10], url))
 
-            db.cursor.execute("SELECT * FROM avito_{} WHERE Адрес = %s AND Тип_сделки = %s AND Цена = %s".format(category),
-                             (data[0], data[1], data[2]))
-            if not db.cursor.fetchall():
-                if data[0] != "Не указано" and data[1] != "Не указано" and data[2] != "Не указано":
-                    db.insert_data("avito_%s" % category, data)
+            if data[0] != "Не указано" and data is not None:
+                try:
+                    db.insert_data(category, data)
+                except:
+                    db.close()
+                    db = DataBase()
+                    db.insert_data(category, data)
                 print("parsed page avito")
-            else:
-                print("avito not unique")
+
             #print(data)
 
         except Exception as e:
@@ -498,21 +555,25 @@ def parse(category_url, base_url, category_name):
 
 
 def main():
+    global visited_urls
     url_apartments = "https://www.avito.ru/saratovskaya_oblast/kvartiry?p=1&s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/kvartiry?"
-    parse(url_apartments, base_url, "apartments")
+    parse(url_apartments, base_url, "Квартиры")
 
+    visited_urls = []
     url_cottages = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/doma_dachi_kottedzhi?"
-    parse(url_cottages, base_url, "cottages")
+    parse(url_cottages, base_url, "Дома")
 
+    visited_urls = []
     url_lands = "https://www.avito.ru/saratovskaya_oblast/zemelnye_uchastki?s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/zemelnye_uchastki?"
-    parse(url_lands, base_url, "lands")
+    parse(url_lands, base_url, "Участки")
 
+    visited_urls = []
     url_commercials = "https://www.avito.ru/saratovskaya_oblast/kommercheskaya_nedvizhimost?s=104&s_trg=3&bt=1"
     base_url = "https://www.avito.ru/saratovskaya_oblast/kommercheskaya_nedvizhimost?"
-    parse(url_commercials, base_url, "commercials")
+    parse(url_commercials, base_url, "Коммерческая_недвижимость")
 
 
 if __name__ == "__main__":
