@@ -415,7 +415,7 @@ def get_commercial_data(html, url):
 
 
 def crawl_page(page, html, category, sell_type):
-    global visited_urls
+    global visited_urls, db
     soup = BeautifulSoup(html, "lxml")
     if page != 1 and "".join([x.text.strip() for x in soup.find_all("li")
                               if len(x.get("class")) == 2 and "list-item--active" in "".join(x.get("class"))]) == "1":
@@ -525,3 +525,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    db.close()
