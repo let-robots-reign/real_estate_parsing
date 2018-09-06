@@ -86,6 +86,8 @@ def get_address(driver):
 
         if street.split()[-1].strip().isdigit():
             block_number = street.split()[-1].strip()
+            if block_number == "unnamed road":
+                block_number = "Не указано"
             street = " ".join(street.split()[:-1]).strip()
 
         return city, district, street, block_number
@@ -240,7 +242,7 @@ def get_apartment_data(url):
 
     city, district, street, block_number = get_address(driver)
     sell_type, rent_info = get_selling_type(url)
-    if "продажа" in sell_type:
+    if "Продажа" in sell_type:
         rent_info = "Не аренда"
     material, lift, year, rooms_number, floor, total_floors, total_area, kitchen_area, repair = get_apartment_params(driver)
     block_type = "Вторичка"
@@ -323,6 +325,8 @@ def crawl_page(html):
             if date == "too old" and len(offer.get("class")) == 1:
                 print("Парсинг завершен youla")
                 return True
+            elif date == "too old":
+                date = str(datetime.datetime.today() - datetime.timedelta(days=2)).split()[0]
             k += 1
             url = "https://youla.ru" + offer.find("a").get("href")
             if url in visited_urls:
@@ -331,7 +335,7 @@ def crawl_page(html):
                 continue
             else:
                 visited_urls.append(url)
-            print(url)
+            #print(url)
 
             if category is None or "saratov" not in url:
                 time.sleep(random.uniform(5, 8))
