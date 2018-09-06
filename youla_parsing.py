@@ -242,7 +242,7 @@ def get_apartment_data(url):
 
     city, district, street, block_number = get_address(driver)
     sell_type, rent_info = get_selling_type(url)
-    if "Продажа" in sell_type:
+    if "продажа" in sell_type.lower():
         rent_info = "Не аренда"
     material, lift, year, rooms_number, floor, total_floors, total_area, kitchen_area, repair = get_apartment_params(driver)
     block_type = "Вторичка"
@@ -283,7 +283,7 @@ def get_cottage_data(url, category):
 
     city, district, street, block_number = get_address(driver)
     sell_type, rent_info = get_selling_type(url)
-    if "Продажа" in sell_type:
+    if "продажа" in sell_type.lower():
         rent_info = "Не аренда"
     price = get_price(driver)
     if "Аренда" in sell_type:

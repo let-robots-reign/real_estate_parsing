@@ -365,7 +365,7 @@ def get_apartment_data(html, url):
     price = get_price(soup)
     rooms_number, floor, total_floors, total_area, material, year, kitchen_area, living_area = get_apartment_params(soup)
     selling_detail = get_selling_type(soup)
-    if "Продажа" in selling_detail:
+    if "продажа" in selling_detail.lower() or "ипотека" in selling_detail.lower():
         rent_info = "Не аренда"
     else:
         rent_info = selling_detail
@@ -391,7 +391,7 @@ def get_cottage_data(html, url):
     price = get_price(soup)
     total_area, land_area, comforts, year, material, total_floors, land_status = get_cottage_params(soup)
     selling_detail = get_selling_type(soup)
-    if "продажа" in selling_detail:
+    if "продажа" in selling_detail.lower() or "ипотека" in selling_detail.lower():
         rent_info = "Не аренда"
     else:
         rent_info = selling_detail
