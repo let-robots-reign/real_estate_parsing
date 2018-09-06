@@ -19,6 +19,7 @@ def main():
     db.create_table("Квартиры")
     db.create_table("Дома")
     db.create_table("Коммерческая_недвижимость")
+    db.create_table("Участки")
     db.create_table("Дубликаты")
 
     if os.path.isfile("logs.txt"):

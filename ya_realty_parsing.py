@@ -208,7 +208,7 @@ def get_date(soup, which_page):
             time_passed = int(date.split()[0])
             if "минут" in date:
                 date = str(datetime.datetime.today() - datetime.timedelta(minutes=time_passed)).split()[0]
-            elif "часов" in date or "часа" in date:
+            elif "часов" in date or "часа" in date or "час" in date:
                 date = str(datetime.datetime.today() - datetime.timedelta(hours=time_passed)).split()[0]
             elif "сейчас" in date:
                 date = str(datetime.datetime.today()).split()[0]

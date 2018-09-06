@@ -181,7 +181,7 @@ def get_apartment_params(driver):
             elif "Общая площадь" in params[i].text.strip():
                 total_area = values[i].text.strip()
             elif "Этаж" in params[i].text.strip():
-                floor = values[i].text.strip()
+                floor = values[i].text.strip().split()[0]
             elif "Этажность дома" in params[i].text.strip():
                 total_floors = values[i].text.strip()
             elif "Площадь кухни" in params[i].text.strip():
@@ -340,7 +340,7 @@ def crawl_page(html):
             data = []
             if category == "Квартира":
                 data = get_apartment_data(url)
-                data.insert(14, date)
+                data.insert(15, date)
                 if data[0] != "Не указано":
                     try:
                         db.insert_data("Квартиры", data)
@@ -352,7 +352,7 @@ def crawl_page(html):
                     file.write("%s--%s--%s--%s--%s--%s\n" % (data[2], data[3], data[4], data[8], data[-1], url))
             elif any(x in category for x in ["Дом", "Коттедж", "Таунхаус", "Дача", "Участок"]):
                 data = get_cottage_data(url, category)
-                data.insert(12, date)
+                data.insert(13, date)
                 if data[0] != "Не указано":
                     try:
                         db.insert_data("Дома", data)
