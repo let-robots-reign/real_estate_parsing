@@ -411,7 +411,7 @@ def get_cottage_data(html):
 
 
 def crawl_page(first_offer, html, category, sell_type):
-    global visited_urls
+    global visited_urls, db
     soup = BeautifulSoup(html, "lxml")
     try:
         offers = soup.find("div", class_="listing js-productGrid ").find_all("div", class_="listing__item")
@@ -528,3 +528,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    db.close()

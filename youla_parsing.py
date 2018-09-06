@@ -308,7 +308,7 @@ def get_cottage_data(url, category):
 
 
 def crawl_page(html):
-    global visited_urls
+    global visited_urls, db
     soup = BeautifulSoup(html, "lxml")
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
     offers = soup.find_all("li", class_="product_item")
@@ -390,3 +390,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    db.close()

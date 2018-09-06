@@ -428,7 +428,7 @@ def get_commercial_data(html, url):
 
 
 def crawl_page(first_offer, html, category, sell_type):
-    global visited_urls
+    global visited_urls, db
     soup = BeautifulSoup(html, "lxml")
     # так как пагинация динамическая и мы не можем получить число страниц, проверяем, есть ли на странице объявления
     try:
@@ -550,3 +550,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    db.close()

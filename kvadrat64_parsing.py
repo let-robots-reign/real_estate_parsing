@@ -515,7 +515,7 @@ def get_land_data(html, url):
 
 
 def crawl_page(first_offer, html, category, sell_type):
-    global visited_urls
+    global visited_urls, db
     soup = BeautifulSoup(html, "lxml")
     try:
         #offers = soup.find_all("a", class_="site3adv") + soup.find_all("a", class_="site3")
@@ -666,3 +666,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    db.close()

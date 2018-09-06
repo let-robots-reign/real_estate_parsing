@@ -79,12 +79,13 @@ def get_address(soup):
         city = address.split(",")[0]
         block_number = address.split(",")[-1].strip()
         if "ул " in block_number.lower() or "ул." in block_number.lower() or "улица" in block_number.lower()\
-                or " пер" in block_number.lower():
+                or " пер" in block_number.lower() or "проспект" in block_number.lower() or "проезд" in block_number.lower():
             street = block_number
             block_number = "Не указано"
 
         for param in address.split(",")[1:-1]:
-            if "ул " in param.lower() or "ул." in param.lower() or "улица" in param.lower() or " пер" in param.lower():
+            if "ул " in param.lower() or "ул." in param.lower() or "улица" in param.lower() \
+                    or " пер" in param.lower() or "проспект" in param.lower() or "проезд" in param.lower():
                 street = param.strip()
             elif "район" in param.lower() or "р-н" in param.lower():
                 district = param.strip()
@@ -463,7 +464,7 @@ def get_commercial_data(url, html):
 
 
 def crawl_page(first_offer, html, category):
-    global visited_urls
+    global visited_urls, db
     soup = BeautifulSoup(html, "lxml")
     try:
         offers = soup.find("div", class_="catalog-list").find_all("div", class_="item_table")
@@ -578,3 +579,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    db.close()
