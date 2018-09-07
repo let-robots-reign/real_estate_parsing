@@ -341,7 +341,7 @@ def get_apartment_data(html, url):
         rent_info = "Не аренда"
     else:
         rent_info = selling_detail
-        selling_detail = "Не продажа"
+        selling_detail = "Не указано"
     #seller_type = get_seller_type(soup)
     description = get_description(soup)
     date = get_date(soup)
@@ -365,7 +365,7 @@ def get_cottage_data(html, url):
         rent_info = "Не аренда"
     else:
         rent_info = selling_detail
-        selling_detail = "Не продажа"
+        selling_detail = "Не указано"
     description = get_description(soup)
     date = get_date(soup)
     images, phone = driver_get_phone_and_images(url)

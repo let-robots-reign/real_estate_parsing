@@ -369,7 +369,7 @@ def get_apartment_data(html, url):
         rent_info = "Не аренда"
     else:
         rent_info = selling_detail
-        selling_detail = "Не продажа"
+        selling_detail = "Не указано"
 
     #seller_type = get_seller_type(soup)
     images = get_photos(soup)
@@ -395,7 +395,7 @@ def get_cottage_data(html, url):
         rent_info = "Не аренда"
     else:
         rent_info = selling_detail
-        selling_detail = "Не продажа"
+        selling_detail = "Не указано"
 
     images = get_photos(soup)
     description = get_description(soup)
