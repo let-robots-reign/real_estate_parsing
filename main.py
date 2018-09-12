@@ -1,18 +1,33 @@
 # -*- coding: utf-8 -*-
+import gc
+from multiprocessing import Process
+import os
+import datetime
+from database import DataBase
+
+t1, t2, t3, t4, t5, t6 = [None] * 6
+
+
+def cls():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def main():
+    global t1, t2, t3, t4, t5, t6
+    if all(p is not None for p in [t1, t2, t3, t4, t5, t6]):
+        for p in [t1, t2, t3, t4, t5, t6]:
+            if p.is_alive():
+                p.terminate()
+                p.join()
+
     import avito_parsing
     import irr_parsing
     import kvadrat64_parsing
     import ya_realty_parsing
     import cian_parsing
     import youla_parsing
-    from multiprocessing import Process
-    import os
-    import datetime
-    from database import DataBase
 
+    cls()
     print("Job started", datetime.datetime.today())
 
     db = DataBase()
@@ -66,6 +81,7 @@ def main():
     t6.join()
 
     db.close()
+    gc.collect()
     print("Job finished", datetime.datetime.today())
 
 
