@@ -3,7 +3,7 @@ beautifulsoup4==4.6.1
 certifi==2018.4.16
 cffi==1.11.5
 chardet==3.0.4
-cryptography==3.2
+cryptography==3.3.2
 EasyProcess==0.2.3
 httmock==1.2.6
 http-request-randomizer==1.2.3
