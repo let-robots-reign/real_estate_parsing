@@ -8,7 +8,7 @@ EasyProcess==0.2.3
 httmock==1.2.6
 http-request-randomizer==1.2.3
 idna==2.7
-mysql-connector-python==8.0.12
+mysql-connector-python==8.0.14
 Pillow==8.1.1
 protobuf==3.6.1
 psutil==5.6.6
